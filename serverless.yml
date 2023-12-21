@@ -1,0 +1,87 @@
+service: tes
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  apiName: ${sls:stage}-tes-rest-api-gateway
+
+package:
+  patterns:
+    - "!*"
+    - "!.idea/**"
+  include:
+    - "dist/**"
+    - "node_modules/**"
+
+functions:
+  proxyLambda:
+    handler: dist/index.handler
+    name: ${sls:stage}-tes-proxy-lambda
+    events:
+      - http:
+          path: /sign-up
+          method: post
+      - http:
+          path: /sign-in
+          method: post
+      - http:
+          path: /{proxy+}
+          method: any
+          authorizer:
+            name: ${self:custom.cognitoUserPoolName}
+            type: COGNITO_USER_POOLS
+            arn: ${self:custom.cognitoUserPoolArn}
+
+resources:
+  Resources:
+    modelsS3Bucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${sls:stage}-tes-s3-bucket
+    awsCredentialsSecretsManager:
+      Type: AWS::SecretsManager::Secret
+      Properties:
+        Name: ${sls:stage}-tes-secrets-manager
+    cognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        AccountRecoverySetting:
+          RecoveryMechanisms:
+            - Name: "verified_email"
+              Priority: 2
+        AutoVerifiedAttributes:
+          - "email"
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: true
+            RequireUppercase: true
+            TemporaryPasswordValidityDays: 0
+        UsernameAttributes:
+          - "email"
+        UserPoolName: ${self:custom.cognitoUserPoolName}
+    cognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        AccessTokenValidity: 24
+        ClientName: ${sls:stage}-tes-cognito-user-pool-client
+        ExplicitAuthFlows:
+          - "ALLOW_ADMIN_USER_PASSWORD_AUTH"
+          - "ALLOW_REFRESH_TOKEN_AUTH"
+        GenerateSecret: true
+        IdTokenValidity: 24
+        TokenValidityUnits:
+          AccessToken: "hours"
+          IdToken: "hours"
+          RefreshToken: "hours"
+        RefreshTokenValidity: 48
+        UserPoolId: ${self:custom.cognitoUserPoolId}
+
+custom:
+  cognitoUserPoolName: ${sls:stage}-tes-cognito-user-pool
+  cognitoUserPoolId: !Ref cognitoUserPool
+  cognitoUserPoolClientId: !Ref cognitoUserPoolClient
+  cognitoUserPoolArn: !GetAtt cognitoUserPool.Arn
