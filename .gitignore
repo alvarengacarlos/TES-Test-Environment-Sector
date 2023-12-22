@@ -1,2 +1,9 @@
 # WebStorm
 .idea
+
+# Serverless directories
+.serverless
+
+# Application
+node_modules
+dist
