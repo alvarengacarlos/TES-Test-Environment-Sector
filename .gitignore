@@ -7,3 +7,6 @@
 # Application
 node_modules
 dist
+
+# Jest
+coverage

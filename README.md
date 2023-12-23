@@ -13,6 +13,9 @@ Estes são os requisitos da aplicação:
 ## Implantação
 Para realizar a implantação execute o seguinte comando:
 ```bash
+rm -r dist node_modules && \
+npm install && \
+npm run build && \
 sls deploy --stage dev
 ```
 
