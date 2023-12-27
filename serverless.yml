@@ -11,6 +11,7 @@ provider:
         - Effect: Allow
           Action:
             - "cognito-idp:DescribeUserPoolClient"
+            - "cognito-idp:AdminInitiateAuth"
           Resource: ${self:custom.cognitoUserPoolArn}
 
 package:
