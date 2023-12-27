@@ -30,6 +30,9 @@ functions:
           path: /sign-up
           method: post
       - http:
+          path: /confirm-sign-up
+          method: post
+      - http:
           path: /sign-in
           method: post
       - http:

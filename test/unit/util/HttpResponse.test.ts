@@ -2,6 +2,21 @@ import {describe, expect, test} from "@jest/globals";
 import {ApiStatusCode, HttpResponse} from "../../../src/util/HttpResponse";
 
 describe("HttpResponse", () => {
+    describe("ok", () => {
+        test("should return a formatted ok http response", () => {
+            const httpResponse = HttpResponse.ok<string>("test", "test")
+
+            expect(httpResponse).toEqual({
+                httpStatusCode: 200,
+                body: {
+                    apiStatusCode: ApiStatusCode.SUCCESS,
+                    message: "test",
+                    data: "test"
+                }
+            })
+        })
+    })
+
     describe("created", () => {
         test("should return a formatted created http response", () => {
             const httpResponse = HttpResponse.created<string>("test", "test")

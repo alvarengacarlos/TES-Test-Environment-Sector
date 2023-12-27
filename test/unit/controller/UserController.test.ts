@@ -4,13 +4,23 @@ import {faker} from "@faker-js/faker"
 
 import {UserController} from "../../../src/controller/UserController";
 import {SignUpDtoInput, SignUpDtoOutput, SignUpUseCase} from "../../../src/use-case/SignUpUseCase";
-import {EmailExistsException} from "../../../src/repository/UserRepositoryImpl";
+import {
+    EmailExistsException,
+    ExpiredConfirmationCodeException,
+    InvalidConfirmationCodeException
+} from "../../../src/repository/UserRepositoryImpl";
 import {HttpRequest} from "../../../src/util/HttpRequest";
 import {ApiStatusCode, HttpResponse} from "../../../src/util/HttpResponse";
+import {
+    ConfirmSignUpDtoInput,
+    ConfirmSignUpDtoOutput,
+    ConfirmSignUpUseCase
+} from "../../../src/use-case/ConfirmSignUpUseCase";
 
 describe("UserController", () => {
     const signUpUseCase = mockDeep<SignUpUseCase>()
-    const userController = new UserController(signUpUseCase)
+    const confirmSignUpUseCase = mockDeep<ConfirmSignUpUseCase>()
+    const userController = new UserController(signUpUseCase, confirmSignUpUseCase)
 
     describe("signUp", () => {
         const email = faker.internet.email()
@@ -44,6 +54,50 @@ describe("UserController", () => {
 
             expect(signUpUseCase.execute).toBeCalledWith(httpRequest.data)
             expect(httpResponse).toEqual(HttpResponse.created<SignUpDtoOutput>("Sign up executed with success", signUpDtoOutput))
+        })
+    })
+
+    describe("confirmSignUp", () => {
+        const email = faker.internet.email()
+        const confirmationCode = "000000"
+        const confirmSignUpDtoInput = new ConfirmSignUpDtoInput(email, confirmationCode)
+        const httpRequest = new HttpRequest<ConfirmSignUpDtoInput>(confirmSignUpDtoInput)
+
+        test("should return bad request http response with EXPIRED_CONFIRMATION_CODE api status code", async () => {
+            jest.spyOn(confirmSignUpUseCase, "execute").mockRejectedValue(new ExpiredConfirmationCodeException())
+
+            const httpResponse = await userController.confirmSignUp(httpRequest)
+
+            expect(confirmSignUpUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.EXPIRED_CONFIRMATION_CODE, "Expired confirmation code", null))
+        })
+
+        test("should return bad request http response with INVALID_CONFIRMATION_CODE api status code", async () => {
+            jest.spyOn(confirmSignUpUseCase, "execute").mockRejectedValue(new InvalidConfirmationCodeException())
+
+            const httpResponse = await userController.confirmSignUp(httpRequest)
+
+            expect(confirmSignUpUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INVALID_CONFIRMATION_CODE, "Invalid confirmation code", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(confirmSignUpUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await userController.confirmSignUp(httpRequest)
+
+            expect(confirmSignUpUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            const confirmSignUpDtoOutput = new ConfirmSignUpDtoOutput(email)
+            jest.spyOn(confirmSignUpUseCase, "execute").mockResolvedValue(confirmSignUpDtoOutput)
+
+            const httpResponse = await userController.confirmSignUp(httpRequest)
+
+            expect(confirmSignUpUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.ok<SignUpDtoOutput>("Confirm sign up executed with success", confirmSignUpDtoOutput))
         })
     })
 })
