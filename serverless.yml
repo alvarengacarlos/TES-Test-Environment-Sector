@@ -5,6 +5,13 @@ provider:
   name: aws
   runtime: nodejs18.x
   apiName: ${sls:stage}-tes-rest-api-gateway
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - "cognito-idp:DescribeUserPoolClient"
+          Resource: ${self:custom.cognitoUserPoolArn}
 
 package:
   patterns:
@@ -32,6 +39,11 @@ functions:
             name: ${self:custom.cognitoUserPoolName}
             type: COGNITO_USER_POOLS
             arn: ${self:custom.cognitoUserPoolArn}
+    environment:
+      COGNITO_USER_POOL_ID: ${self:custom.cognitoUserPoolId}
+      COGNITO_CLIENT_ID: ${self:custom.cognitoUserPoolClientId}
+      # COGNITO_CLIENT_SECRET environment variable is set dynamically inside the application in util/getCognitoClientSecret.ts
+      COGNITO_CLIENT_SECRET: ""
 
 resources:
   Resources:
