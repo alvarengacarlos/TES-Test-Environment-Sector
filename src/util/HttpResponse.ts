@@ -20,6 +20,10 @@ export class HttpResponse<T> {
         }
     }
 
+    static ok<T>(message: string, data: T): HttpResponse<T> {
+        return new HttpResponse<T>(HttpStatusCode.OK, ApiStatusCode.SUCCESS, message, data)
+    }
+
     static created<T>(message: string, data: T): HttpResponse<T> {
         return new HttpResponse<T>(HttpStatusCode.CREATED, ApiStatusCode.SUCCESS, message, data)
     }
@@ -38,6 +42,7 @@ export class HttpResponse<T> {
 }
 
 enum HttpStatusCode {
+    OK = 200,
     CREATED = 201,
     BAD_REQUEST = 400,
     CONFLICT = 409,
@@ -49,4 +54,6 @@ export enum ApiStatusCode {
     INVALID_INPUT = "INVALID_INPUT",
     INTERNAL_ERROR = "INTERNAL_ERROR",
     EMAIL_EXISTS = "EMAIL_EXISTS",
+    EXPIRED_CONFIRMATION_CODE = "EXPIRED_CONFIRMATION_CODE",
+    INVALID_CONFIRMATION_CODE = "INVALID_CONFIRMATION_CODE",
 }
