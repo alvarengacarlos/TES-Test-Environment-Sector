@@ -6,11 +6,14 @@ import {UserRepositoryImpl} from "../repository/UserRepositoryImpl";
 import {UserController} from "../controller/UserController";
 import {UserValidator} from "../middleware/UserValidator";
 import {ConfirmSignUpDtoInput, ConfirmSignUpUseCase} from "../use-case/ConfirmSignUpUseCase";
+import {SignInUseCase} from "../use-case/SignInUseCase";
 
 const userRepository = new UserRepositoryImpl()
 const signUpUseCase = new SignUpUseCase(userRepository)
 const confirmSignUpUseCase = new ConfirmSignUpUseCase(userRepository)
-const userController = new UserController(signUpUseCase, confirmSignUpUseCase)
+const signInUseCase = new SignInUseCase(userRepository)
+
+const userController = new UserController(signUpUseCase, confirmSignUpUseCase, signInUseCase)
 const userValidator = new UserValidator()
 
 export const userRouter = express.Router()
@@ -38,7 +41,20 @@ userRouter.post("/confirm-sign-up", userValidator.confirmSignUpValidator, async 
         })
 
         const httpResponse = await userController.confirmSignUp(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+    } catch (error: any) {
+        next(error)
+    }
+})
 
+userRouter.post("/sign-in", userValidator.signInValidator, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<SignUpDtoInput>({
+            email: request.body.email,
+            password: request.body.password
+        })
+
+        const httpResponse = await userController.signIn(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
     } catch (error: any) {
         next(error)
