@@ -9,17 +9,32 @@ Estes são os requisitos da aplicação:
 - [Node versão 18](https://nodejs.org/en)
 - [NPM versão 9](https://nodejs.org/en)
 - [AWS CLI versão 2](https://aws.amazon.com/cli/)
+- Linux
 
 ## Implantação
-Para realizar a implantação execute o seguinte comando:
+Para realizar a implantação siga os seguintes passos:
+- Execute o comando abaixo para configurar a variável de ambiente `DATABASE_URL`. Lembre-se de substituir os valores `USERNAME`, `PASSWORD`, `HOST` e `DATABASE_NAME`:
 ```bash
-rm -r dist node_modules && \
+export DATABASE_URL=mongodb+srv://USERNAME:PASSWORD@HOST/DATABASE_NAME
+# exemplo: 'mongodb+srv://root:rootpw@mongo-atlas.com/tes'
+```
+
+- Execute o comando abaixo para criar as migrações no banco de dados:
+```bash
+rm -r node_modules && \
 npm install && \
+npm run migrate
+```
+
+- Execute o comando abaixo para implantar a aplicação. Não se esqueça de configurar o parâmetro `databaseUrl` com o mesmo valor utilizado na variável de ambiente `DATABASE_URL`:
+```bash
+rm -r dist && \
 npm run build && \
-sls deploy --stage dev
+sls deploy --stage dev --param="databaseUrl=mongodb+srv://USERNAME:PASSWORD@HOST/DATABASE_NAME"
+# exemplo de databaseUrl: "databaseUrl=mongodb+srv://root:rootpw@mongo-atlas.com/tes"
 ```
 
 Para realizar a remoção execute o seguinte comando:
 ```bash
-sls remove --stage dev
+sls remove --stage dev --param="databaseUrl=mongodb+srv://USERNAME:PASSWORD@HOST/DATABASE_NAME"
 ```
