@@ -48,6 +48,7 @@ functions:
       COGNITO_CLIENT_ID: ${self:custom.cognitoUserPoolClientId}
       # COGNITO_CLIENT_SECRET environment variable is set dynamically inside the application in util/getCognitoClientSecret.ts
       COGNITO_CLIENT_SECRET: ""
+      DATABASE_URL: ${param:databaseUrl}
 
 resources:
   Resources:
