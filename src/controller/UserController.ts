@@ -1,15 +1,13 @@
-import {
-    EmailExistsException,
-    ExpiredConfirmationCodeException,
-    InvalidConfirmationCodeException,
-    EmailNotConfirmedException,
-    IncorrectEmailOrPasswordException
-} from "../repository/UserRepositoryImpl";
 import {ApiStatusCode, HttpResponse} from "../util/HttpResponse";
 import {HttpRequest} from "../util/HttpRequest";
 import {SignUpDtoInput, SignUpDtoOutput, SignUpUseCase} from "../use-case/SignUpUseCase";
 import {ConfirmSignUpDtoInput, ConfirmSignUpDtoOutput, ConfirmSignUpUseCase} from "../use-case/ConfirmSignUpUseCase";
 import {SignInDtoInput, SignInDtoOutput, SignInUseCase} from "../use-case/SignInUseCase";
+import {EmailExistsException} from "../exception/EmailExistsException";
+import {ExpiredConfirmationCodeException} from "../exception/ExpiredConfirmationCodeException";
+import {InvalidConfirmationCodeException} from "../exception/InvalidConfirmationCodeException";
+import {IncorrectEmailOrPasswordException} from "../exception/IncorrectEmailOrPasswordException";
+import {EmailNotConfirmedException} from "../exception/EmailNotConfirmedException";
 
 export class UserController {
     constructor(

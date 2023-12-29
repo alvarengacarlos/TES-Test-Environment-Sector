@@ -1,4 +1,7 @@
 import {DeployModelRepository} from "../repository/DeployModelRepository";
+import {DeployModelType} from "../util/DeployModelType";
+import {DatabaseType} from "../util/DatabaseType";
+import {ExecutionEnvironment} from "../util/ExecutionEnvironment";
 
 export class CreateDeployModelUseCase {
     constructor(
@@ -7,7 +10,16 @@ export class CreateDeployModelUseCase {
     }
 
     async execute(createDeployModelDtoInput: CreateDeployModelDtoInput): Promise<CreateDeployModelDtoOutput> {
-        return await this.deployModelRepository.saveDeployModel(createDeployModelDtoInput)
+        const deployModel = await this.deployModelRepository.saveDeployModel(createDeployModelDtoInput)
+
+        return new CreateDeployModelDtoOutput(
+            deployModel.id,
+            deployModel.deployModelName,
+            deployModel.deployModelType,
+            deployModel.databaseType,
+            deployModel.executionEnvironment,
+            deployModel.ownerEmail
+        )
     }
 }
 
@@ -22,18 +34,6 @@ export class CreateDeployModelDtoInput {
     }
 }
 
-export enum DeployModelType {
-    TWO_TIERS = "TWO_TIERS",
-    THREE_TIERS = "THREE_TIERS",
-}
-
-export enum DatabaseType {
-    POSTGRES_SQL= "POSTGRES_SQL"
-}
-
-export enum ExecutionEnvironment {
-    NODE_JS = "NODE_JS"
-}
 
 export class CreateDeployModelDtoOutput {
     constructor(

@@ -2,7 +2,9 @@ import {NextFunction, Request, Response} from "express"
 import Joi, {ValidationErrorItem} from "joi"
 
 import {ApiStatusCode, HttpResponse} from "../util/HttpResponse";
-import {DatabaseType, DeployModelType, ExecutionEnvironment} from "../use-case/CreateDeployModelUseCase";
+import {DeployModelType} from "../util/DeployModelType";
+import {DatabaseType} from "../util/DatabaseType";
+import {ExecutionEnvironment} from "../util/ExecutionEnvironment";
 
 export class DeployModelValidator {
     createDeployModelValidator(request: Request, response: Response, next: NextFunction) {
@@ -23,6 +25,42 @@ export class DeployModelValidator {
             executionEnvironment: Joi.string()
                 .trim()
                 .valid(ExecutionEnvironment.NODE_JS)
+                .required()
+        })
+
+        const result = schema.validate(request.body)
+
+        if (result.error) {
+            const httpResponse = HttpResponse.badRequest<Array<ValidationErrorItem>>(ApiStatusCode.INVALID_INPUT, result.error.message, result.error.details)
+            return response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+        }
+
+        request.body = result.value
+        next()
+    }
+
+    uploadFrontendSourceCodeValidator(request: Request, response: Response, next: NextFunction) {
+        const schema = Joi.object({
+            deployModelId: Joi.string()
+                .uuid()
+                .required()
+        })
+
+        const result = schema.validate(request.body)
+
+        if (result.error) {
+            const httpResponse = HttpResponse.badRequest<Array<ValidationErrorItem>>(ApiStatusCode.INVALID_INPUT, result.error.message, result.error.details)
+            return response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+        }
+
+        request.body = result.value
+        next()
+    }
+
+    uploadBackendSourceCodeValidator(request: Request, response: Response, next: NextFunction) {
+        const schema = Joi.object({
+            deployModelId: Joi.string()
+                .uuid()
                 .required()
         })
 

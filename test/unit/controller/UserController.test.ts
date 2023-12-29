@@ -5,14 +5,6 @@ import {faker} from "@faker-js/faker"
 import {UserController} from "../../../src/controller/UserController";
 import {HttpRequest} from "../../../src/util/HttpRequest";
 import {ApiStatusCode, HttpResponse} from "../../../src/util/HttpResponse";
-import {
-    EmailExistsException,
-    ExpiredConfirmationCodeException,
-    InvalidConfirmationCodeException,
-    EmailNotConfirmedException,
-    IncorrectEmailOrPasswordException,
-} from "../../../src/repository/UserRepositoryImpl";
-
 import {SignUpDtoInput, SignUpDtoOutput, SignUpUseCase} from "../../../src/use-case/SignUpUseCase";
 import {
     ConfirmSignUpDtoInput,
@@ -20,6 +12,11 @@ import {
     ConfirmSignUpUseCase
 } from "../../../src/use-case/ConfirmSignUpUseCase";
 import {SignInDtoInput, SignInDtoOutput, SignInUseCase} from "../../../src/use-case/SignInUseCase";
+import {EmailExistsException} from "../../../src/exception/EmailExistsException";
+import {ExpiredConfirmationCodeException} from "../../../src/exception/ExpiredConfirmationCodeException";
+import {InvalidConfirmationCodeException} from "../../../src/exception/InvalidConfirmationCodeException";
+import {IncorrectEmailOrPasswordException} from "../../../src/exception/IncorrectEmailOrPasswordException";
+import {EmailNotConfirmedException} from "../../../src/exception/EmailNotConfirmedException";
 
 describe("UserController", () => {
     const signUpUseCase = mockDeep<SignUpUseCase>()

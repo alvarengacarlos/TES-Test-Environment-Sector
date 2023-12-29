@@ -1,9 +1,23 @@
-import {SignUpDtoInput, SignUpDtoOutput} from "../use-case/SignUpUseCase";
-import {ConfirmSignUpDtoInput, ConfirmSignUpDtoOutput} from "../use-case/ConfirmSignUpUseCase";
-import {SignInDtoInput, SignInDtoOutput} from "../use-case/SignInUseCase";
+import {UserEntity} from "../entity/UserEntity";
+import {AuthenticationTokenEntity} from "../entity/AuthenticationTokenEntity";
 
 export interface UserRepository {
-    saveUser(signUpDtoInput: SignUpDtoInput): Promise<SignUpDtoOutput>
-    updateUserEmailToVerified(confirmSignUpDtoInput: ConfirmSignUpDtoInput): Promise<ConfirmSignUpDtoOutput>
-    authenticateUser(signInDtoInput: SignInDtoInput): Promise<SignInDtoOutput>
+    saveUser(saveUserInput: SaveUserInput): Promise<UserEntity>
+    updateUserEmailToVerified(updateUserEmailToVerifiedInput: UpdateUserEmailToVerifiedInput): Promise<UserEntity>
+    authenticateUser(authenticateUserInput: AuthenticateUserInput): Promise<AuthenticationTokenEntity>
+}
+
+export type SaveUserInput = {
+    email: string,
+    password: string
+}
+
+export type UpdateUserEmailToVerifiedInput = {
+    email: string,
+    confirmationCode: string
+}
+
+export type AuthenticateUserInput = {
+    email: string,
+    password: string
 }

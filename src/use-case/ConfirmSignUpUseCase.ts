@@ -7,7 +7,14 @@ export class ConfirmSignUpUseCase {
     }
 
     async execute(confirmSignUpDtoInput: ConfirmSignUpDtoInput): Promise<ConfirmSignUpDtoOutput> {
-        return await this.userRepository.updateUserEmailToVerified(confirmSignUpDtoInput)
+        const user= await this.userRepository.updateUserEmailToVerified({
+            email: confirmSignUpDtoInput.email,
+            confirmationCode: confirmSignUpDtoInput.confirmationCode
+        })
+
+        return new ConfirmSignUpDtoOutput(
+            user.email
+        )
     }
 }
 

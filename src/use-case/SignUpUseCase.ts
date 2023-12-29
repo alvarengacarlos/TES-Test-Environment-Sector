@@ -7,7 +7,12 @@ export class SignUpUseCase {
     }
 
     async execute(signUpDtoInput: SignUpDtoInput): Promise<SignUpDtoOutput> {
-        return await this.userRepository.saveUser(signUpDtoInput)
+        const user = await this.userRepository.saveUser({
+            email: signUpDtoInput.email,
+            password: signUpDtoInput.password
+        })
+
+        return new SignUpDtoOutput(user.email)
     }
 }
 

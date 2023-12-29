@@ -4,6 +4,7 @@ frameworkVersion: '3'
 provider:
   name: aws
   runtime: nodejs18.x
+  timeout: 20
   apiName: ${sls:stage}-tes-rest-api-gateway
   iam:
     role:
@@ -13,6 +14,13 @@ provider:
             - "cognito-idp:DescribeUserPoolClient"
             - "cognito-idp:AdminInitiateAuth"
           Resource: ${self:custom.cognitoUserPoolArn}
+        - Effect: Allow
+          Action:
+            - "s3:PutObject"
+          Resource: !Join
+            - ""
+            - - ${self:custom.tesS3BucketArn}
+              - "/*"
 
 package:
   patterns:
@@ -49,14 +57,15 @@ functions:
       # COGNITO_CLIENT_SECRET environment variable is set dynamically inside the application in util/getCognitoClientSecret.ts
       COGNITO_CLIENT_SECRET: ""
       DATABASE_URL: ${param:databaseUrl}
+      S3_BUCKET_NAME: ${self:custom.tesS3BucketName}
 
 resources:
   Resources:
-    modelsS3Bucket:
+    tesS3Bucket:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${sls:stage}-tes-s3-bucket
-    awsCredentialsSecretsManager:
+        BucketName: ${self:custom.tesS3BucketName}
+    tesSecretsManager:
       Type: AWS::SecretsManager::Secret
       Properties:
         Name: ${sls:stage}-tes-secrets-manager
@@ -102,3 +111,5 @@ custom:
   cognitoUserPoolId: !Ref cognitoUserPool
   cognitoUserPoolClientId: !Ref cognitoUserPoolClient
   cognitoUserPoolArn: !GetAtt cognitoUserPool.Arn
+  tesS3BucketName: ${sls:stage}-tes-s3-bucket
+  tesS3BucketArn: !GetAtt tesS3Bucket.Arn

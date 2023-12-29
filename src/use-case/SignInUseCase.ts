@@ -7,7 +7,16 @@ export class SignInUseCase {
     }
 
     async execute(signInDtoInput: SignInDtoInput): Promise<SignInDtoOutput> {
-        return await this.userRepository.authenticateUser(signInDtoInput)
+        const authenticationToken = await this.userRepository.authenticateUser({
+            email: signInDtoInput.email,
+            password: signInDtoInput.password
+        })
+
+        return new SignInDtoOutput(
+            authenticationToken.identityToken,
+            authenticationToken.identityTokenType,
+            authenticationToken.refreshToken
+        )
     }
 }
 
