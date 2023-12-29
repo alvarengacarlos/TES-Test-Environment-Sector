@@ -5,13 +5,16 @@ import {faker} from "@faker-js/faker"
 import {
     CreateDeployModelDtoInput,
     CreateDeployModelDtoOutput,
-    CreateDeployModelUseCase, DatabaseType,
-    DeployModelType, ExecutionEnvironment
+    CreateDeployModelUseCase
 } from "../../../src/use-case/CreateDeployModelUseCase";
 import {DeployModelRepository} from "../../../src/repository/DeployModelRepository";
+import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
+import {DeployModelType} from "../../../src/util/DeployModelType";
+import {DatabaseType} from "../../../src/util/DatabaseType";
+import {ExecutionEnvironment} from "../../../src/util/ExecutionEnvironment";
 import {randomUUID} from "crypto";
 
-describe("ConfirmSignUpUseCase", () => {
+describe("CreateDeployModelUseCase", () => {
     const deployModelRepository = mockDeep<DeployModelRepository>()
     const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
 
@@ -25,18 +28,33 @@ describe("ConfirmSignUpUseCase", () => {
         ExecutionEnvironment.NODE_JS,
         ownerEmail
     )
-    const createDeployModelDtoOutput = new CreateDeployModelDtoOutput(
+
+    const deployModelEntity = new DeployModelEntity(
         randomUUID().toString(),
         deployModelName,
         DeployModelType.TWO_TIERS,
         DatabaseType.POSTGRES_SQL,
         ExecutionEnvironment.NODE_JS,
-        ownerEmail
+        ownerEmail,
+        "",
+        "",
+        "",
+        ""
     )
+
+    const createDeployModelDtoOutput = new CreateDeployModelDtoOutput(
+        deployModelEntity.id,
+        deployModelEntity.deployModelName,
+        deployModelEntity.deployModelType,
+        deployModelEntity.databaseType,
+        deployModelEntity.executionEnvironment,
+        deployModelEntity.ownerEmail
+    )
+
 
     describe("execute", () => {
         test("should create a deploy model", async () => {
-            jest.spyOn(deployModelRepository, "saveDeployModel").mockReturnValue(Promise.resolve(createDeployModelDtoOutput))
+            jest.spyOn(deployModelRepository, "saveDeployModel").mockResolvedValue(deployModelEntity)
 
             const output = await createDeployModelUseCase.execute(createDeployModelDtoInput)
 

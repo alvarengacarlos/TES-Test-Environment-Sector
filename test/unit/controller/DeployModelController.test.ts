@@ -2,23 +2,41 @@ import {describe, expect, jest, test} from "@jest/globals";
 import {mockDeep} from "jest-mock-extended";
 import {faker} from "@faker-js/faker"
 
+import {randomUUID} from "crypto";
+
 import {DeployModelController} from "../../../src/controller/DeployModelController";
 import {HttpRequest} from "../../../src/util/HttpRequest";
 import {ApiStatusCode, HttpResponse} from "../../../src/util/HttpResponse";
 import {
-    CreateDeployModelDtoInput, CreateDeployModelDtoOutput,
+    CreateDeployModelDtoInput,
+    CreateDeployModelDtoOutput,
     CreateDeployModelUseCase,
-    DatabaseType,
-    DeployModelType,
-    ExecutionEnvironment
 } from "../../../src/use-case/CreateDeployModelUseCase";
-import * as crypto from "crypto";
-import {randomUUID} from "crypto";
+import {
+    UploadFrontendSourceCodeDtoInput, UploadFrontendSourceCodeDtoOutput,
+    UploadFrontendSourceCodeUseCase
+} from "../../../src/use-case/UploadFrontendSourceCodeUseCase";
+import {
+    UploadBackendSourceCodeDtoInput, UploadBackendSourceCodeDtoOutput,
+    UploadBackendSourceCodeUseCase
+} from "../../../src/use-case/UploadBackendSourceCodeUseCase";
+import {DeployModelType} from "../../../src/util/DeployModelType";
+import {DatabaseType} from "../../../src/util/DatabaseType";
+import {ExecutionEnvironment} from "../../../src/util/ExecutionEnvironment";
+import {DeployModelDoesNotExistException} from "../../../src/exception/DeployModelDoesNotExistException";
+import {
+    TwoTiersApplicationDoesNotHaveFrontendException
+} from "../../../src/exception/TwoTiersApplicationDoesNotHaveFrontendException";
+import {CodeType} from "../../../src/util/CodeType";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
+    const uploadFrontendSourceCodeUseCase = mockDeep<UploadFrontendSourceCodeUseCase>()
+    const uploadBackendSourceCodeUseCase = mockDeep<UploadBackendSourceCodeUseCase>()
     const deployModelController = new DeployModelController(
         createDeployModelUseCase,
+        uploadFrontendSourceCodeUseCase,
+        uploadBackendSourceCodeUseCase
     )
     const ownerEmail = faker.internet.email()
 
@@ -57,6 +75,88 @@ describe("DeployModelController", () => {
 
             expect(createDeployModelUseCase.execute).toBeCalledWith(httpRequest.data)
             expect(httpResponse).toEqual(HttpResponse.created("Deploy model created with success", createDeployModelDtoOutput))
+        })
+    })
+
+    describe("uploadFrontendSourceCode", () => {
+        const uploadFrontendSourceCodeDtoInput = new UploadFrontendSourceCodeDtoInput(
+            randomUUID().toString(),
+            Buffer.from("")
+        )
+        const httpRequest = new HttpRequest<UploadFrontendSourceCodeDtoInput>(uploadFrontendSourceCodeDtoInput)
+
+        const uploadFrontendSourceCodeDtoOutput = new UploadFrontendSourceCodeDtoOutput(
+            uploadFrontendSourceCodeDtoInput.deployModelId,
+            `/${ownerEmail}/${uploadFrontendSourceCodeDtoInput.deployModelId}/${CodeType.FRONTEND}/${uploadFrontendSourceCodeDtoInput.deployModelId}`
+        )
+
+        test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
+            jest.spyOn(uploadFrontendSourceCodeUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.uploadFrontendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with TWO_TIERS_APPLICATION_DOES_NOT_HAVE_FRONTEND api status code", async () => {
+            jest.spyOn(uploadFrontendSourceCodeUseCase, "execute").mockRejectedValue(new TwoTiersApplicationDoesNotHaveFrontendException())
+
+            const httpResponse = await deployModelController.uploadFrontendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.TWO_TIERS_APPLICATION_DOES_NOT_HAVE_FRONTEND, "Two tiers application does not have frontend", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(uploadFrontendSourceCodeUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.uploadFrontendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(uploadFrontendSourceCodeUseCase, "execute").mockResolvedValue(uploadFrontendSourceCodeDtoOutput)
+
+            const httpResponse = await deployModelController.uploadFrontendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.ok("upload executed with success", uploadFrontendSourceCodeDtoOutput))
+        })
+    })
+
+    describe("uploadBackendSourceCode", () => {
+        const uploadBackendSourceCodeDtoInput = new UploadBackendSourceCodeDtoInput(
+            randomUUID().toString(),
+            Buffer.from("")
+        )
+        const httpRequest = new HttpRequest<UploadBackendSourceCodeDtoInput>(uploadBackendSourceCodeDtoInput)
+
+        const uploadBackendSourceCodeDtoOutput = new UploadBackendSourceCodeDtoOutput(
+            uploadBackendSourceCodeDtoInput.deployModelId,
+            `/${ownerEmail}/${uploadBackendSourceCodeDtoInput.deployModelId}/${CodeType.BACKEND}/${uploadBackendSourceCodeDtoInput.deployModelId}`
+        )
+
+        test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
+            jest.spyOn(uploadBackendSourceCodeUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(uploadBackendSourceCodeUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(uploadBackendSourceCodeUseCase, "execute").mockResolvedValue(uploadBackendSourceCodeDtoOutput)
+
+            const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.ok("upload executed with success", uploadBackendSourceCodeDtoOutput))
         })
     })
 })

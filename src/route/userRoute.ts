@@ -7,8 +7,9 @@ import {UserController} from "../controller/UserController";
 import {UserValidator} from "../middleware/UserValidator";
 import {ConfirmSignUpDtoInput, ConfirmSignUpUseCase} from "../use-case/ConfirmSignUpUseCase";
 import {SignInUseCase} from "../use-case/SignInUseCase";
+import {cognitoClient} from "../infra/cognitoClient";
 
-const userRepository = new UserRepositoryImpl()
+const userRepository = new UserRepositoryImpl(cognitoClient)
 const signUpUseCase = new SignUpUseCase(userRepository)
 const confirmSignUpUseCase = new ConfirmSignUpUseCase(userRepository)
 const signInUseCase = new SignInUseCase(userRepository)

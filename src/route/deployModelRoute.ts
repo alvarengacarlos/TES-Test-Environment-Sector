@@ -10,10 +10,22 @@ import {
 } from "../use-case/CreateDeployModelUseCase";
 import {prismaClient} from "../infra/primaClient";
 import {setTokenInformations} from "../middleware/setTokenInformations";
+import {
+    UploadFrontendSourceCodeDtoInput,
+    UploadFrontendSourceCodeUseCase
+} from "../use-case/UploadFrontendSourceCodeUseCase";
+import {
+    UploadBackendSourceCodeDtoInput,
+    UploadBackendSourceCodeUseCase
+} from "../use-case/UploadBackendSourceCodeUseCase";
+import {uploadSourceCodeValidator} from "../middleware/uploadFile";
+import {s3Client} from "../infra/s3Client";
 
-const deployModelRepository = new DeployModelRepositoryImpl(prismaClient)
+const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client)
 const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
-const deployModelController = new DeployModelController(createDeployModelUseCase)
+const uploadFrontendSourceCodeUseCase = new UploadFrontendSourceCodeUseCase(deployModelRepository)
+const uploadBackendSourceCodeUseCase = new UploadBackendSourceCodeUseCase(deployModelRepository)
+const deployModelController = new DeployModelController(createDeployModelUseCase, uploadFrontendSourceCodeUseCase, uploadBackendSourceCodeUseCase)
 const deployModelValidator = new DeployModelValidator()
 
 export const deployModelRouter = express.Router()
@@ -29,6 +41,34 @@ deployModelRouter.post("/deploy-model", setTokenInformations, deployModelValidat
         })
 
         const httpResponse = await deployModelController.createDeployModel(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+deployModelRouter.post("/upload-frontend-source-code", uploadSourceCodeValidator, deployModelValidator.uploadFrontendSourceCodeValidator, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<UploadFrontendSourceCodeDtoInput>({
+            deployModelId: request.body.deployModelId,
+            bufferedSourceCodeFile: request.file?.buffer || Buffer.from("")
+        })
+
+        const httpResponse = await deployModelController.uploadFrontendSourceCode(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+deployModelRouter.post("/upload-backend-source-code", uploadSourceCodeValidator, deployModelValidator.uploadBackendSourceCodeValidator, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<UploadBackendSourceCodeDtoInput>({
+            deployModelId: request.body.deployModelId,
+            bufferedSourceCodeFile: request.file?.buffer || Buffer.from("")
+        })
+
+        const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
     } catch (error: any) {
         next(error)

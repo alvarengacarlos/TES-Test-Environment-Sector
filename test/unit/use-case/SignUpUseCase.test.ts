@@ -4,6 +4,7 @@ import {faker} from "@faker-js/faker"
 
 import {SignUpDtoInput, SignUpDtoOutput, SignUpUseCase} from "../../../src/use-case/SignUpUseCase";
 import {UserRepository} from "../../../src/repository/UserRepository";
+import {UserEntity} from "../../../src/entity/UserEntity";
 
 describe("SignUpUseCase", () => {
     const userRepository = mockDeep<UserRepository>()
@@ -19,9 +20,11 @@ describe("SignUpUseCase", () => {
         email
     )
 
+    const userEntity = new UserEntity(email, password)
+
     describe("execute", () => {
         test("should sign up a user", async () => {
-            jest.spyOn(userRepository, "saveUser").mockReturnValue(Promise.resolve(signUpDtoOutput))
+            jest.spyOn(userRepository, "saveUser").mockResolvedValue(userEntity)
 
             const output = await signUpUseCase.execute(signUpDtoInput)
 

@@ -6,6 +6,7 @@ import awsServerlessExpressMiddleware from "aws-serverless-express/middleware";
 
 const app = express()
 app.use(express.json())
+app.use(express.urlencoded({extended: true}))
 app.use(awsServerlessExpressMiddleware.eventContext())
 app.use(userRouter)
 app.use(deployModelRouter)

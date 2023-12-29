@@ -11,28 +11,39 @@ import {
 
 import {createCognitoSecretHash} from "../util/createCognitoSecretHash";
 import {Logger} from "../util/Logger";
-import {UserRepository} from "./UserRepository";
-import {SignUpDtoInput, SignUpDtoOutput} from "../use-case/SignUpUseCase";
-import {ConfirmSignUpDtoInput, ConfirmSignUpDtoOutput} from "../use-case/ConfirmSignUpUseCase";
-import {SignInDtoInput, SignInDtoOutput} from "../use-case/SignInUseCase";
+import {AuthenticateUserInput, SaveUserInput, UpdateUserEmailToVerifiedInput, UserRepository} from "./UserRepository";
+import {IncorrectEmailOrPasswordException} from "../exception/IncorrectEmailOrPasswordException";
+import {EmailNotConfirmedException} from "../exception/EmailNotConfirmedException";
+import {InvalidConfirmationCodeException} from "../exception/InvalidConfirmationCodeException";
+import {ExpiredConfirmationCodeException} from "../exception/ExpiredConfirmationCodeException";
+import {EmailExistsException} from "../exception/EmailExistsException";
+import {UserEntity} from "../entity/UserEntity";
+import {AuthenticationTokenEntity} from "../entity/AuthenticationTokenEntity";
+import {CognitoException} from "../exception/CognitoException";
 
 export class UserRepositoryImpl implements UserRepository {
-    private cognitoClient = new CognitoIdentityProviderClient()
+    constructor(
+        private readonly cognitoClient: CognitoIdentityProviderClient
+    ) {
+    }
 
-    async saveUser(signUpDtoInput: SignUpDtoInput): Promise<SignUpDtoOutput> {
+    async saveUser(saveUserInput: SaveUserInput): Promise<UserEntity> {
         try {
             const signUpCommand = new SignUpCommand({
                 ClientId: String(process.env.COGNITO_CLIENT_ID),
-                SecretHash: await createCognitoSecretHash(signUpDtoInput.email),
-                Username: signUpDtoInput.email,
-                Password: signUpDtoInput.password
+                SecretHash: await createCognitoSecretHash(saveUserInput.email),
+                Username: saveUserInput.email,
+                Password: saveUserInput.password
             })
 
             Logger.info(this.constructor.name, this.saveUser.name, "executing sign up command")
             await this.cognitoClient.send(signUpCommand)
 
             Logger.info(this.constructor.name, this.saveUser.name, "sign up command executed with success")
-            return new SignUpDtoOutput(signUpDtoInput.email)
+            return new UserEntity(
+                saveUserInput.email,
+                saveUserInput.password
+            )
 
         } catch (error: any) {
             if (error instanceof UsernameExistsException) {
@@ -41,24 +52,27 @@ export class UserRepositoryImpl implements UserRepository {
             }
 
             Logger.error(this.constructor.name, this.saveUser.name, `sign up command throw unhandled error: ${error.message}`)
-            throw new Error(error.message)
+            throw new CognitoException()
         }
     }
 
-    async updateUserEmailToVerified(confirmSignUpDtoInput: ConfirmSignUpDtoInput): Promise<ConfirmSignUpDtoOutput> {
+    async updateUserEmailToVerified(updateUserEmailToVerifiedInput: UpdateUserEmailToVerifiedInput): Promise<UserEntity> {
         try {
             const confirmSignUpCommand = new ConfirmSignUpCommand({
                 ClientId: String(process.env.COGNITO_CLIENT_ID),
-                SecretHash: await createCognitoSecretHash(confirmSignUpDtoInput.email),
-                Username: confirmSignUpDtoInput.email,
-                ConfirmationCode: confirmSignUpDtoInput.confirmationCode
+                SecretHash: await createCognitoSecretHash(updateUserEmailToVerifiedInput.email),
+                Username: updateUserEmailToVerifiedInput.email,
+                ConfirmationCode: updateUserEmailToVerifiedInput.confirmationCode
             })
 
             Logger.info(this.constructor.name, this.updateUserEmailToVerified.name, "executing confirm sign up command")
             await this.cognitoClient.send(confirmSignUpCommand)
 
             Logger.info(this.constructor.name, this.updateUserEmailToVerified.name, "confirm sign up command executed with success")
-            return new ConfirmSignUpDtoOutput(confirmSignUpDtoInput.email)
+            return new UserEntity(
+                updateUserEmailToVerifiedInput.email,
+                ""
+            )
 
         } catch (error: any) {
             if (error instanceof ExpiredCodeException) {
@@ -77,25 +91,25 @@ export class UserRepositoryImpl implements UserRepository {
             }
 
             Logger.error(this.constructor.name, this.updateUserEmailToVerified.name, `confirm sign up command throw unhandled error: ${error.message}`)
-            throw new Error(error.message)
+            throw new CognitoException()
         }
     }
 
-    async authenticateUser(signInDtoInput: SignInDtoInput): Promise<SignInDtoOutput> {
+    async authenticateUser(authenticateUserInput: AuthenticateUserInput): Promise<AuthenticationTokenEntity> {
         try {
             const adminInitiateAuthCommand = new AdminInitiateAuthCommand({
                 UserPoolId: String(process.env.COGNITO_USER_POOL_ID),
                 ClientId: String(process.env.COGNITO_CLIENT_ID),
                 AuthFlow: "ADMIN_USER_PASSWORD_AUTH",
                 AuthParameters: {
-                    USERNAME: signInDtoInput.email,
-                    PASSWORD: signInDtoInput.password,
-                    SECRET_HASH: await createCognitoSecretHash(signInDtoInput.email)
+                    USERNAME: authenticateUserInput.email,
+                    PASSWORD: authenticateUserInput.password,
+                    SECRET_HASH: await createCognitoSecretHash(authenticateUserInput.email)
                 }
             })
 
             const response = await this.cognitoClient.send(adminInitiateAuthCommand)
-            return new SignInDtoOutput(
+            return new AuthenticationTokenEntity(
                 String(response.AuthenticationResult?.IdToken),
                 String(response.AuthenticationResult?.TokenType),
                 String(response.AuthenticationResult?.RefreshToken),
@@ -118,37 +132,7 @@ export class UserRepositoryImpl implements UserRepository {
             }
 
             Logger.error(this.constructor.name, this.authenticateUser.name, `sign in command throw unhandled error: ${error.message}`)
-            throw new Error(error.message)
+            throw new CognitoException()
         }
-    }
-}
-
-export class EmailExistsException extends Error {
-    constructor() {
-        super("Email exists");
-    }
-}
-
-export class ExpiredConfirmationCodeException extends Error {
-    constructor() {
-        super("Expired confirmation code");
-    }
-}
-
-export class InvalidConfirmationCodeException extends Error {
-    constructor() {
-        super("Invalid confirmation code");
-    }
-}
-
-export class EmailNotConfirmedException extends Error {
-    constructor() {
-        super("Email not confirmed");
-    }
-}
-
-export class IncorrectEmailOrPasswordException extends Error {
-    constructor() {
-        super("Incorrect email or password");
     }
 }
