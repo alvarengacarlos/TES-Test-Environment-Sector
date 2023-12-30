@@ -34,7 +34,6 @@ describe("UploadBackendSourceCodeUseCase", () => {
         ownerEmail,
         "",
         `/${ownerEmail}/${uploadBackendSourceCodeDtoInput.deployModelId}/${CodeType.BACKEND}/${uploadBackendSourceCodeDtoInput.deployModelId}`,
-        "",
         ""
     )
 

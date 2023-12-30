@@ -12,10 +12,11 @@ import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {CodeType} from "../../../src/util/CodeType";
 import {s3Client} from "../../../src/infra/s3Client";
 import {S3Exception} from "../../../src/exception/S3Exception";
+import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
 
 
 describe("DeployModelRepositoryImpl", () => {
-    const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client)
+    const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
     jest.spyOn(prismaClient, "$connect").mockResolvedValue()
     jest.spyOn(prismaClient, "$disconnect").mockResolvedValue()
 
@@ -28,7 +29,6 @@ describe("DeployModelRepositoryImpl", () => {
         DatabaseType.POSTGRES_SQL,
         ExecutionEnvironment.NODE_JS,
         ownerEmail,
-        "",
         "",
         "",
         ""
@@ -128,6 +128,30 @@ describe("DeployModelRepositoryImpl", () => {
                 where: {id: saveBackendSourceCodeInput.deployModelId},
                 data: {
                     backendSourceCodePath: `sourceCode/${saveBackendSourceCodeInput.ownerEmail}-${saveBackendSourceCodeInput.deployModelId}-${saveBackendSourceCodeInput.codeType}-sourceCode.zip`
+                }
+            })
+            expect(output).toEqual(deployModelEntity)
+        })
+    })
+
+    describe("saveAwsCredentials", () => {
+        const saveAwsCredentialsInput = {
+            ownerEmail: ownerEmail,
+            deployModelId: randomUUID().toString(),
+            accessKeyId: "00000000000000000000",
+            secretAccessKey: "0000000000000000000000000000000000000000"
+        }
+
+        test("should save aws credentials", async () => {
+            secretsManagerClient.send = async function () {}
+            jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
+
+            const output = await deployModelRepository.saveAwsCredentials(saveAwsCredentialsInput)
+
+            expect(prismaClient.deployModel.update).toBeCalledWith({
+                where: {id: saveAwsCredentialsInput.deployModelId},
+                data: {
+                    awsCredentialsPath: `${saveAwsCredentialsInput.ownerEmail}-${saveAwsCredentialsInput.deployModelId}-awsCredentials`,
                 }
             })
             expect(output).toEqual(deployModelEntity)

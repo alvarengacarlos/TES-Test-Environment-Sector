@@ -17,6 +17,5 @@ model DeployModel {
   ownerEmail             String
   backendSourceCodePath  String @default("")
   frontendSourceCodePath String @default("")
-  accessKeyIdPath        String @default("")
-  secretAccessKeyPath    String @default("")
+  awsCredentialsPath     String @default("")
 }

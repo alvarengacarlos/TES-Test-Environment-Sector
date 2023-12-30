@@ -20,12 +20,15 @@ import {
 } from "../use-case/UploadBackendSourceCodeUseCase";
 import {uploadSourceCodeValidator} from "../middleware/uploadFile";
 import {s3Client} from "../infra/s3Client";
+import {SaveAwsCredentialsDtoInput, SaveAwsCredentialsUseCase} from "../use-case/SaveAwsCredentialsUseCase";
+import {secretsManagerClient} from "../infra/secretsManagerClient";
 
-const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client)
+const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
 const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
 const uploadFrontendSourceCodeUseCase = new UploadFrontendSourceCodeUseCase(deployModelRepository)
 const uploadBackendSourceCodeUseCase = new UploadBackendSourceCodeUseCase(deployModelRepository)
-const deployModelController = new DeployModelController(createDeployModelUseCase, uploadFrontendSourceCodeUseCase, uploadBackendSourceCodeUseCase)
+const saveAwsCredentialsUseCase = new SaveAwsCredentialsUseCase(deployModelRepository)
+const deployModelController = new DeployModelController(createDeployModelUseCase, uploadFrontendSourceCodeUseCase, uploadBackendSourceCodeUseCase, saveAwsCredentialsUseCase)
 const deployModelValidator = new DeployModelValidator()
 
 export const deployModelRouter = express.Router()
@@ -70,6 +73,21 @@ deployModelRouter.post("/upload-backend-source-code", uploadSourceCodeValidator,
 
         const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+deployModelRouter.post("/aws-credentials", deployModelValidator.saveAwsCredentialsValidator, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<SaveAwsCredentialsDtoInput>({
+            deployModelId: request.body.deployModelId,
+            accessKeyId: request.body.accessKeyId,
+            secretAccessKey: request.body.secretAccessKey
+        })
+        const httpResponse = await deployModelController.saveAwsCredentials(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+
     } catch (error: any) {
         next(error)
     }

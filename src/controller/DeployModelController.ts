@@ -17,12 +17,18 @@ import {
     UploadBackendSourceCodeDtoInput, UploadBackendSourceCodeDtoOutput,
     UploadBackendSourceCodeUseCase
 } from "../use-case/UploadBackendSourceCodeUseCase";
+import {
+    SaveAwsCredentialsDtoInput,
+    SaveAwsCredentialsDtoOutput,
+    SaveAwsCredentialsUseCase
+} from "../use-case/SaveAwsCredentialsUseCase";
 
 export class DeployModelController {
     constructor(
         private createDeployModelUseCase: CreateDeployModelUseCase,
         private uploadFrontendSourceCodeUseCase: UploadFrontendSourceCodeUseCase,
-        private uploadBackendSourceCodeUseCase: UploadBackendSourceCodeUseCase
+        private uploadBackendSourceCodeUseCase: UploadBackendSourceCodeUseCase,
+        private saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase
     ) {
     }
 
@@ -56,6 +62,20 @@ export class DeployModelController {
         try {
             const uploadBackendSourceCodeDtoOutput = await this.uploadBackendSourceCodeUseCase.execute(httpRequest.data)
             return HttpResponse.ok("upload executed with success", uploadBackendSourceCodeDtoOutput)
+        } catch (error: any) {
+            if (error instanceof DeployModelDoesNotExistException) {
+                return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            return HttpResponse.internalServerError()
+        }
+    }
+
+    async saveAwsCredentials(httpRequest: HttpRequest<SaveAwsCredentialsDtoInput>): Promise<HttpResponse<SaveAwsCredentialsDtoOutput | null>> {
+        try {
+            const saveAwsCredentialsDtoOutput = await this.saveAwsCredentialsUseCase.execute(httpRequest.data)
+            return HttpResponse.ok("aws credentials saved with success", saveAwsCredentialsDtoOutput)
+
         } catch (error: any) {
             if (error instanceof DeployModelDoesNotExistException) {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)

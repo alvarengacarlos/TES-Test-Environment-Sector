@@ -1,7 +1,7 @@
 import {PrismaClient} from "@prisma/client";
 
 import {
-    DeployModelRepository, FindDeployModelByIdInput,
+    DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
     SaveBackendSourceCodeInput,
     SaveDeployModelInput,
     SaveFrontendSourceCodeInput
@@ -11,12 +11,15 @@ import {DeployModelEntity} from "../entity/DeployModelEntity";
 import {DatabaseException} from "../exception/DatabaseException";
 import {PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import {S3Exception} from "../exception/S3Exception";
+import {CreateSecretCommand, SecretsManagerClient} from "@aws-sdk/client-secrets-manager";
+import {SecretsManagerException} from "../exception/SecretsManagerException";
 
 export class DeployModelRepositoryImpl implements DeployModelRepository {
 
     constructor(
         private readonly prismaClient: PrismaClient,
-        private readonly s3Client: S3Client
+        private readonly s3Client: S3Client,
+        private readonly secretsManagerClient: SecretsManagerClient
     ) {
     }
 
@@ -38,8 +41,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.ownerEmail,
                 result.frontendSourceCodePath,
                 result.backendSourceCodePath,
-                result.accessKeyIdPath,
-                result.secretAccessKeyPath
+                result.awsCredentialsPath
             )
 
 
@@ -75,8 +77,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.ownerEmail,
                 result.frontendSourceCodePath,
                 result.backendSourceCodePath,
-                result.accessKeyIdPath,
-                result.secretAccessKeyPath
+                result.awsCredentialsPath
             )
 
         } catch (error: any) {
@@ -116,8 +117,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.ownerEmail,
                 result.frontendSourceCodePath,
                 result.backendSourceCodePath,
-                result.accessKeyIdPath,
-                result.secretAccessKeyPath
+                result.awsCredentialsPath
             )
 
         } catch (error: any) {
@@ -165,7 +165,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 }
             })
 
-            Logger.info(this.constructor.name, this.saveBackendSourceCode.name, "source code saved with success")
+            Logger.info(this.constructor.name, this.saveBackendSourceCode.name, "source code path saved with success")
             return new DeployModelEntity(
                 result.id,
                 result.deployModelName,
@@ -175,8 +175,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.ownerEmail,
                 result.frontendSourceCodePath,
                 result.backendSourceCodePath,
-                result.accessKeyIdPath,
-                result.secretAccessKeyPath
+                result.awsCredentialsPath
             )
 
         } catch (error: any) {
@@ -185,6 +184,62 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
 
         } finally {
             await this.prismaClient.$disconnect()
+        }
+    }
+
+    async saveAwsCredentials(saveAwsCredentialsInput: SaveAwsCredentialsInput): Promise<DeployModelEntity> {
+        const awsCredentialsPath = `${saveAwsCredentialsInput.ownerEmail}-${saveAwsCredentialsInput.deployModelId}-awsCredentials`
+        const awsCredentials = JSON.stringify({
+            accessKeyId: saveAwsCredentialsInput.accessKeyId,
+            secretAccessKey: saveAwsCredentialsInput.secretAccessKey
+        })
+        await this.saveSecrets(awsCredentialsPath, awsCredentials)
+
+        try {
+            Logger.info(this.constructor.name, this.saveAwsCredentials.name, `saving aws credentials path`)
+
+            await this.prismaClient.$connect()
+            const result = await this.prismaClient.deployModel.update({
+                where: {id: saveAwsCredentialsInput.deployModelId},
+                data: {
+                    awsCredentialsPath: awsCredentialsPath
+                }
+            })
+
+            Logger.info(this.constructor.name, this.saveAwsCredentials.name, `aws credentials path saved with success`)
+            return new DeployModelEntity(
+                result.id,
+                result.deployModelName,
+                result.deployModelType,
+                result.databaseType,
+                result.executionEnvironment,
+                result.ownerEmail,
+                result.frontendSourceCodePath,
+                result.backendSourceCodePath,
+                result.awsCredentialsPath
+            )
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.saveAwsCredentials.name, `Prisma client throw ${error.message}`)
+            throw new DatabaseException()
+
+        } finally {
+            await this.prismaClient.$disconnect()
+        }
+    }
+
+    private async saveSecrets(name: string, secret: string) {
+        try {
+            Logger.info(this.constructor.name, this.saveSecrets.name, `saving secrets`)
+            const createSecretCommand = new CreateSecretCommand({
+                Name: name,
+                SecretString: secret,
+            })
+            await this.secretsManagerClient.send(createSecretCommand)
+            Logger.info(this.constructor.name, this.saveSecrets.name, `secret saved with success`)
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.saveSecrets.name, `Secrets manager client throw ${error.message}`)
+            throw new SecretsManagerException()
         }
     }
 }
