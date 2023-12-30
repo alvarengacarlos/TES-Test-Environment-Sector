@@ -13,11 +13,13 @@ import {
     CreateDeployModelUseCase,
 } from "../../../src/use-case/CreateDeployModelUseCase";
 import {
-    UploadFrontendSourceCodeDtoInput, UploadFrontendSourceCodeDtoOutput,
+    UploadFrontendSourceCodeDtoInput,
+    UploadFrontendSourceCodeDtoOutput,
     UploadFrontendSourceCodeUseCase
 } from "../../../src/use-case/UploadFrontendSourceCodeUseCase";
 import {
-    UploadBackendSourceCodeDtoInput, UploadBackendSourceCodeDtoOutput,
+    UploadBackendSourceCodeDtoInput,
+    UploadBackendSourceCodeDtoOutput,
     UploadBackendSourceCodeUseCase
 } from "../../../src/use-case/UploadBackendSourceCodeUseCase";
 import {DeployModelType} from "../../../src/util/DeployModelType";
@@ -28,15 +30,22 @@ import {
     TwoTiersApplicationDoesNotHaveFrontendException
 } from "../../../src/exception/TwoTiersApplicationDoesNotHaveFrontendException";
 import {CodeType} from "../../../src/util/CodeType";
+import {
+    SaveAwsCredentialsDtoInput,
+    SaveAwsCredentialsDtoOutput,
+    SaveAwsCredentialsUseCase
+} from "../../../src/use-case/SaveAwsCredentialsUseCase";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
     const uploadFrontendSourceCodeUseCase = mockDeep<UploadFrontendSourceCodeUseCase>()
     const uploadBackendSourceCodeUseCase = mockDeep<UploadBackendSourceCodeUseCase>()
+    const saveAwsCredentialsUseCase = mockDeep<SaveAwsCredentialsUseCase>()
     const deployModelController = new DeployModelController(
         createDeployModelUseCase,
         uploadFrontendSourceCodeUseCase,
-        uploadBackendSourceCodeUseCase
+        uploadBackendSourceCodeUseCase,
+        saveAwsCredentialsUseCase
     )
     const ownerEmail = faker.internet.email()
 
@@ -157,6 +166,47 @@ describe("DeployModelController", () => {
             const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
 
             expect(httpResponse).toEqual(HttpResponse.ok("upload executed with success", uploadBackendSourceCodeDtoOutput))
+        })
+    })
+
+    describe("saveAwsCredentials", () => {
+        const deployModelId = randomUUID().toString()
+        const httpRequest = new HttpRequest<SaveAwsCredentialsDtoInput>({
+            deployModelId: deployModelId,
+            accessKeyId: "00000000000000000000",
+            secretAccessKey: "0000000000000000000000000000000000000000"
+        })
+
+        const saveAwsCredentialsDtoOutput = new SaveAwsCredentialsDtoOutput(
+            deployModelId,
+            `${ownerEmail}-${deployModelId}-awsCredentials`,
+        )
+
+        test("should return bad request http response", async () => {
+            jest.spyOn(saveAwsCredentialsUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.saveAwsCredentials(httpRequest)
+
+            expect(saveAwsCredentialsUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(saveAwsCredentialsUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.saveAwsCredentials(httpRequest)
+
+            expect(saveAwsCredentialsUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(saveAwsCredentialsUseCase, "execute").mockResolvedValue(saveAwsCredentialsDtoOutput)
+
+            const httpResponse = await deployModelController.saveAwsCredentials(httpRequest)
+
+            expect(saveAwsCredentialsUseCase.execute).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.ok("aws credentials saved with success", saveAwsCredentialsDtoOutput))
         })
     })
 })

@@ -8,8 +8,7 @@ export class DeployModelEntity {
         public readonly ownerEmail: string,
         public readonly frontendSourceCodePath: string,
         public readonly backendSourceCodePath: string,
-        public readonly accessKeyIdPath: string,
-        public readonly secretAccessKeyPath: string
+        public readonly awsCredentialsPath: string,
     ) {
     }
 }

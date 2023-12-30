@@ -37,7 +37,6 @@ describe("UploadFrontendSourceCodeUseCase", () => {
         ownerEmail,
         `/${ownerEmail}/${uploadFrontendSourceCodeDtoInput.deployModelId}/${CodeType.FRONTEND}/${uploadFrontendSourceCodeDtoInput.deployModelId}`,
         "",
-        "",
         ""
     )
 
@@ -65,7 +64,6 @@ describe("UploadFrontendSourceCodeUseCase", () => {
                 DatabaseType.POSTGRES_SQL,
                 ExecutionEnvironment.NODE_JS,
                 ownerEmail,
-                "",
                 "",
                 "",
                 ""

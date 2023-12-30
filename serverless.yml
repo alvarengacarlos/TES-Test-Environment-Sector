@@ -21,6 +21,10 @@ provider:
             - ""
             - - ${self:custom.tesS3BucketArn}
               - "/*"
+        - Effect: Allow
+          Action:
+            - "secretsmanager:CreateSecret"
+          Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*"
 
 package:
   patterns:
@@ -65,10 +69,6 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.tesS3BucketName}
-    tesSecretsManager:
-      Type: AWS::SecretsManager::Secret
-      Properties:
-        Name: ${sls:stage}-tes-secrets-manager
     cognitoUserPool:
       Type: AWS::Cognito::UserPool
       Properties:

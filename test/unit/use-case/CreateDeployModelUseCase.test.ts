@@ -38,7 +38,6 @@ describe("CreateDeployModelUseCase", () => {
         ownerEmail,
         "",
         "",
-        "",
         ""
     )
 
