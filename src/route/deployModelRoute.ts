@@ -11,13 +11,9 @@ import {
 import {prismaClient} from "../infra/primaClient";
 import {setTokenInformations} from "../middleware/setTokenInformations";
 import {
-    UploadFrontendSourceCodeDtoInput,
-    UploadFrontendSourceCodeUseCase
-} from "../use-case/UploadFrontendSourceCodeUseCase";
-import {
-    UploadBackendSourceCodeDtoInput,
-    UploadBackendSourceCodeUseCase
-} from "../use-case/UploadBackendSourceCodeUseCase";
+    UploadSourceCodeDtoInput,
+    UploadSourceCodeUseCase
+} from "../use-case/UploadSourceCodeUseCase";
 import {uploadSourceCodeValidator} from "../middleware/uploadFile";
 import {s3Client} from "../infra/s3Client";
 import {SaveAwsCredentialsDtoInput, SaveAwsCredentialsUseCase} from "../use-case/SaveAwsCredentialsUseCase";
@@ -25,10 +21,9 @@ import {secretsManagerClient} from "../infra/secretsManagerClient";
 
 const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
 const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
-const uploadFrontendSourceCodeUseCase = new UploadFrontendSourceCodeUseCase(deployModelRepository)
-const uploadBackendSourceCodeUseCase = new UploadBackendSourceCodeUseCase(deployModelRepository)
+const uploadSourceCodeUseCase = new UploadSourceCodeUseCase(deployModelRepository)
 const saveAwsCredentialsUseCase = new SaveAwsCredentialsUseCase(deployModelRepository)
-const deployModelController = new DeployModelController(createDeployModelUseCase, uploadFrontendSourceCodeUseCase, uploadBackendSourceCodeUseCase, saveAwsCredentialsUseCase)
+const deployModelController = new DeployModelController(createDeployModelUseCase, uploadSourceCodeUseCase, saveAwsCredentialsUseCase)
 const deployModelValidator = new DeployModelValidator()
 
 export const deployModelRouter = express.Router()
@@ -37,9 +32,6 @@ deployModelRouter.post("/deploy-model", setTokenInformations, deployModelValidat
     try {
         const httpRequest = new HttpRequest<CreateDeployModelDtoInput>({
             deployModelName: request.body.deployModelName,
-            deployModelType: request.body.deployModelType,
-            databaseType: request.body.databaseType,
-            executionEnvironment: request.body.executionEnvironment,
             ownerEmail: String(request.headers.requesterEmail)
         })
 
@@ -50,28 +42,14 @@ deployModelRouter.post("/deploy-model", setTokenInformations, deployModelValidat
     }
 })
 
-deployModelRouter.post("/upload-frontend-source-code", uploadSourceCodeValidator, deployModelValidator.uploadFrontendSourceCodeValidator, async (request: Request, response: Response, next: NextFunction) => {
+deployModelRouter.post("/upload-source-code", uploadSourceCodeValidator, deployModelValidator.uploadSourceCodeValidator, async (request: Request, response: Response, next: NextFunction) => {
     try {
-        const httpRequest = new HttpRequest<UploadFrontendSourceCodeDtoInput>({
+        const httpRequest = new HttpRequest<UploadSourceCodeDtoInput>({
             deployModelId: request.body.deployModelId,
             bufferedSourceCodeFile: request.file?.buffer || Buffer.from("")
         })
 
-        const httpResponse = await deployModelController.uploadFrontendSourceCode(httpRequest)
-        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
-    } catch (error: any) {
-        next(error)
-    }
-})
-
-deployModelRouter.post("/upload-backend-source-code", uploadSourceCodeValidator, deployModelValidator.uploadBackendSourceCodeValidator, async (request: Request, response: Response, next: NextFunction) => {
-    try {
-        const httpRequest = new HttpRequest<UploadBackendSourceCodeDtoInput>({
-            deployModelId: request.body.deployModelId,
-            bufferedSourceCodeFile: request.file?.buffer || Buffer.from("")
-        })
-
-        const httpResponse = await deployModelController.uploadBackendSourceCode(httpRequest)
+        const httpResponse = await deployModelController.uploadSourceCode(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
     } catch (error: any) {
         next(error)

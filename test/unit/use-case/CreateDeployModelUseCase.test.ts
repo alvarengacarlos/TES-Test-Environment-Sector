@@ -9,9 +9,6 @@ import {
 } from "../../../src/use-case/CreateDeployModelUseCase";
 import {DeployModelRepository} from "../../../src/repository/DeployModelRepository";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
-import {DeployModelType} from "../../../src/util/DeployModelType";
-import {DatabaseType} from "../../../src/util/DatabaseType";
-import {ExecutionEnvironment} from "../../../src/util/ExecutionEnvironment";
 import {randomUUID} from "crypto";
 
 describe("CreateDeployModelUseCase", () => {
@@ -23,30 +20,20 @@ describe("CreateDeployModelUseCase", () => {
     const ownerEmail = faker.internet.email()
     const createDeployModelDtoInput = new CreateDeployModelDtoInput(
         deployModelName,
-        DeployModelType.TWO_TIERS,
-        DatabaseType.POSTGRES_SQL,
-        ExecutionEnvironment.NODE_JS,
         ownerEmail
     )
 
     const deployModelEntity = new DeployModelEntity(
         randomUUID().toString(),
         deployModelName,
-        DeployModelType.TWO_TIERS,
-        DatabaseType.POSTGRES_SQL,
-        ExecutionEnvironment.NODE_JS,
         ownerEmail,
         "",
         "",
-        ""
     )
 
     const createDeployModelDtoOutput = new CreateDeployModelDtoOutput(
         deployModelEntity.id,
         deployModelEntity.deployModelName,
-        deployModelEntity.deployModelType,
-        deployModelEntity.databaseType,
-        deployModelEntity.executionEnvironment,
         deployModelEntity.ownerEmail
     )
 

@@ -1,37 +1,35 @@
 import {DeployModelRepository} from "../repository/DeployModelRepository";
-import {CodeType} from "../util/CodeType";
 import {DeployModelDoesNotExistException} from "../exception/DeployModelDoesNotExistException";
 
-export class UploadBackendSourceCodeUseCase {
+export class UploadSourceCodeUseCase {
     constructor(
         private readonly deployModelRepository: DeployModelRepository
     ) {
     }
 
-    async execute(uploadBackendSourceCodeDtoInput: UploadBackendSourceCodeDtoInput): Promise<UploadBackendSourceCodeDtoOutput> {
+    async execute(uploadSourceCodeDtoInput: UploadSourceCodeDtoInput): Promise<UploadSourceCodeDtoOutput> {
         const deployModel = await this.deployModelRepository.findDeployModelById({
-            deployModelId: uploadBackendSourceCodeDtoInput.deployModelId
+            deployModelId: uploadSourceCodeDtoInput.deployModelId
         })
 
         if (!deployModel) {
             throw new DeployModelDoesNotExistException()
         }
 
-        const result = await this.deployModelRepository.saveBackendSourceCode({
+        const result = await this.deployModelRepository.saveSourceCode({
             ownerEmail: deployModel.ownerEmail,
             deployModelId: deployModel.id,
-            codeType: CodeType.BACKEND,
-            bufferedSourceCodeFile: uploadBackendSourceCodeDtoInput.bufferedSourceCodeFile
+            bufferedSourceCodeFile: uploadSourceCodeDtoInput.bufferedSourceCodeFile
         })
 
-        return new UploadBackendSourceCodeDtoOutput(
+        return new UploadSourceCodeDtoOutput(
             result.id,
-            result.backendSourceCodePath
+            result.sourceCodePath
         )
     }
 }
 
-export class UploadBackendSourceCodeDtoInput {
+export class UploadSourceCodeDtoInput {
     constructor(
         public readonly deployModelId: string,
         public readonly bufferedSourceCodeFile: Buffer
@@ -39,7 +37,7 @@ export class UploadBackendSourceCodeDtoInput {
     }
 }
 
-export class UploadBackendSourceCodeDtoOutput {
+export class UploadSourceCodeDtoOutput {
     constructor(
         public readonly id: string,
         public readonly sourceCodePath: string

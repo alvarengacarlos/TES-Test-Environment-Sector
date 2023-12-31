@@ -2,9 +2,8 @@ import {PrismaClient} from "@prisma/client";
 
 import {
     DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
-    SaveBackendSourceCodeInput,
+    SaveSourceCodeInput,
     SaveDeployModelInput,
-    SaveFrontendSourceCodeInput
 } from "./DeployModelRepository";
 import {Logger} from "../util/Logger";
 import {DeployModelEntity} from "../entity/DeployModelEntity";
@@ -35,12 +34,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             return new DeployModelEntity(
                 result.id,
                 result.deployModelName,
-                result.deployModelType,
-                result.databaseType,
-                result.executionEnvironment,
                 result.ownerEmail,
-                result.frontendSourceCodePath,
-                result.backendSourceCodePath,
+                result.sourceCodePath,
                 result.awsCredentialsPath
             )
 
@@ -71,12 +66,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             return new DeployModelEntity(
                 result.id,
                 result.deployModelName,
-                result.deployModelType,
-                result.databaseType,
-                result.executionEnvironment,
                 result.ownerEmail,
-                result.frontendSourceCodePath,
-                result.backendSourceCodePath,
+                result.sourceCodePath,
                 result.awsCredentialsPath
             )
 
@@ -89,39 +80,34 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    async saveFrontendSourceCode(saveFrontendSourceCodeInput: SaveFrontendSourceCodeInput): Promise<DeployModelEntity> {
-        const frontendSourceCodePath = await this.saveSourceCode(
-            saveFrontendSourceCodeInput.ownerEmail,
-            saveFrontendSourceCodeInput.deployModelId,
-            saveFrontendSourceCodeInput.codeType,
-            saveFrontendSourceCodeInput.bufferedSourceCodeFile
+    async saveSourceCode(saveSourceCodeInput: SaveSourceCodeInput): Promise<DeployModelEntity> {
+        const sourceCodePath = await this.uploadSourceCode(
+            saveSourceCodeInput.ownerEmail,
+            saveSourceCodeInput.deployModelId,
+            saveSourceCodeInput.bufferedSourceCodeFile
         )
 
         try {
-            Logger.info(this.constructor.name, this.saveFrontendSourceCode.name, "saving source code path")
+            Logger.info(this.constructor.name, this.saveSourceCode.name, "saving source code path")
             await this.prismaClient.$connect()
             const result = await this.prismaClient.deployModel.update({
-                where: {id: saveFrontendSourceCodeInput.deployModelId},
+                where: {id: saveSourceCodeInput.deployModelId},
                 data: {
-                    frontendSourceCodePath: frontendSourceCodePath
+                    sourceCodePath: sourceCodePath,
                 }
             })
 
-            Logger.info(this.constructor.name, this.saveFrontendSourceCode.name, "source code saved with success")
+            Logger.info(this.constructor.name, this.saveSourceCode.name, "source code saved with success")
             return new DeployModelEntity(
                 result.id,
                 result.deployModelName,
-                result.deployModelType,
-                result.databaseType,
-                result.executionEnvironment,
                 result.ownerEmail,
-                result.frontendSourceCodePath,
-                result.backendSourceCodePath,
+                result.sourceCodePath,
                 result.awsCredentialsPath
             )
 
         } catch (error: any) {
-            Logger.error(this.constructor.name, this.saveFrontendSourceCode.name, `Prisma client throw ${error.message}`)
+            Logger.error(this.constructor.name, this.saveSourceCode.name, `Prisma client throw ${error.message}`)
             throw new DatabaseException()
 
         } finally {
@@ -129,10 +115,10 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    private async saveSourceCode(ownerEmail: string, deployModelId: string, codeType: string, bufferedSourceCodeFile: Buffer): Promise<string> {
+    private async uploadSourceCode(ownerEmail: string, deployModelId: string, bufferedSourceCodeFile: Buffer): Promise<string> {
         try {
             Logger.info(this.constructor.name, this.saveSourceCode.name, "executing put object command")
-            const sourceCodePath = `sourceCode/${ownerEmail}-${deployModelId}-${codeType}-sourceCode.zip`
+            const sourceCodePath = `sourceCode/${ownerEmail}-${deployModelId}-sourceCode.zip`
             const putObjectCommand = new PutObjectCommand({
                 Bucket: String(process.env.S3_BUCKET_NAME),
                 Key: sourceCodePath,
@@ -144,46 +130,6 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         } catch (error: any) {
             Logger.error(this.constructor.name, this.saveSourceCode.name, `put object command throw ${error.message}`)
             throw new S3Exception()
-        }
-    }
-
-    async saveBackendSourceCode(saveBackendSourceCodeInput: SaveBackendSourceCodeInput): Promise<DeployModelEntity> {
-        const backendSourceCodePath = await this.saveSourceCode(
-            saveBackendSourceCodeInput.ownerEmail,
-            saveBackendSourceCodeInput.deployModelId,
-            saveBackendSourceCodeInput.codeType,
-            saveBackendSourceCodeInput.bufferedSourceCodeFile
-        )
-
-        try {
-            Logger.info(this.constructor.name, this.saveBackendSourceCode.name, "saving source code path")
-            await this.prismaClient.$connect()
-            const result = await this.prismaClient.deployModel.update({
-                where: {id: saveBackendSourceCodeInput.deployModelId},
-                data: {
-                    backendSourceCodePath: backendSourceCodePath
-                }
-            })
-
-            Logger.info(this.constructor.name, this.saveBackendSourceCode.name, "source code path saved with success")
-            return new DeployModelEntity(
-                result.id,
-                result.deployModelName,
-                result.deployModelType,
-                result.databaseType,
-                result.executionEnvironment,
-                result.ownerEmail,
-                result.frontendSourceCodePath,
-                result.backendSourceCodePath,
-                result.awsCredentialsPath
-            )
-
-        } catch (error: any) {
-            Logger.error(this.constructor.name, this.saveBackendSourceCode.name, `Prisma client throw ${error.message}`)
-            throw new DatabaseException()
-
-        } finally {
-            await this.prismaClient.$disconnect()
         }
     }
 
@@ -210,12 +156,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             return new DeployModelEntity(
                 result.id,
                 result.deployModelName,
-                result.deployModelType,
-                result.databaseType,
-                result.executionEnvironment,
                 result.ownerEmail,
-                result.frontendSourceCodePath,
-                result.backendSourceCodePath,
+                result.sourceCodePath,
                 result.awsCredentialsPath
             )
 
