@@ -12,9 +12,6 @@ import {
 import {DeployModelDoesNotExistException} from "../../../src/exception/DeployModelDoesNotExistException";
 import {DeployModelRepository} from "../../../src/repository/DeployModelRepository";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
-import {DeployModelType} from "../../../src/util/DeployModelType";
-import {DatabaseType} from "../../../src/util/DatabaseType";
-import {ExecutionEnvironment} from "../../../src/util/ExecutionEnvironment";
 
 describe("SaveAwsCredentialsUseCase", () => {
     const deployModelRepository = mockDeep<DeployModelRepository>()
@@ -31,11 +28,7 @@ describe("SaveAwsCredentialsUseCase", () => {
     const deployModelEntity = new DeployModelEntity(
         deployModelId,
         faker.internet.domainName(),
-        DeployModelType.TWO_TIERS,
-        DatabaseType.POSTGRES_SQL,
-        ExecutionEnvironment.NODE_JS,
         ownerEmail,
-        "",
         "",
         `${ownerEmail}-${deployModelId}-awsCredentials`,
     )

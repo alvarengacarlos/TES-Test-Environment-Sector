@@ -5,11 +5,7 @@ import {randomUUID} from "crypto";
 
 import {prismaClient} from "../../../src/infra/primaClient"
 import {DeployModelRepositoryImpl} from "../../../src/repository/DeployModelRepositoryImpl";
-import {DeployModelType} from "../../../src/util/DeployModelType";
-import {DatabaseType} from "../../../src/util/DatabaseType";
-import {ExecutionEnvironment} from "../../../src/util/ExecutionEnvironment";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
-import {CodeType} from "../../../src/util/CodeType";
 import {s3Client} from "../../../src/infra/s3Client";
 import {S3Exception} from "../../../src/exception/S3Exception";
 import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
@@ -25,21 +21,14 @@ describe("DeployModelRepositoryImpl", () => {
     const deployModelEntity = new DeployModelEntity(
         randomUUID(),
         faker.internet.domainName(),
-        DeployModelType.TWO_TIERS,
-        DatabaseType.POSTGRES_SQL,
-        ExecutionEnvironment.NODE_JS,
         ownerEmail,
         "",
         "",
-        ""
     )
 
     describe("saveDeployModel", () => {
         const saveDeployModelInput = {
             deployModelName: faker.internet.domainName(),
-            deployModelType: DeployModelType.TWO_TIERS,
-            databaseType: DatabaseType.POSTGRES_SQL,
-            executionEnvironment: ExecutionEnvironment.NODE_JS,
             ownerEmail: ownerEmail
         }
 
@@ -70,11 +59,10 @@ describe("DeployModelRepositoryImpl", () => {
         })
     })
 
-    describe("saveFrontendSourceCode", () => {
-        const saveFrontendSourceCodeInput = {
+    describe("saveSourceCode", () => {
+        const saveSourceCodeInput = {
             ownerEmail: faker.internet.email(),
             deployModelId: randomUUID().toString(),
-            codeType: CodeType.FRONTEND,
             bufferedSourceCodeFile: Buffer.from("")
         }
 
@@ -83,51 +71,19 @@ describe("DeployModelRepositoryImpl", () => {
                 throw new Error()
             }
 
-            await expect(deployModelRepository.saveFrontendSourceCode(saveFrontendSourceCodeInput)).rejects.toThrow(S3Exception)
+            await expect(deployModelRepository.saveSourceCode(saveSourceCodeInput)).rejects.toThrow(S3Exception)
         })
 
-        test("should save a frontend source code", async () => {
+        test("should save source code", async () => {
             s3Client.send = async function () {}
             jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
 
-            const output = await deployModelRepository.saveFrontendSourceCode(saveFrontendSourceCodeInput)
+            const output = await deployModelRepository.saveSourceCode(saveSourceCodeInput)
 
             expect(prismaClient.deployModel.update).toBeCalledWith({
-                where: {id: saveFrontendSourceCodeInput.deployModelId},
+                where: {id: saveSourceCodeInput.deployModelId},
                 data: {
-                    frontendSourceCodePath: `sourceCode/${saveFrontendSourceCodeInput.ownerEmail}-${saveFrontendSourceCodeInput.deployModelId}-${saveFrontendSourceCodeInput.codeType}-sourceCode.zip`
-                }
-            })
-            expect(output).toEqual(deployModelEntity)
-        })
-    })
-
-    describe("saveBackendSourceCode", () => {
-        const saveBackendSourceCodeInput = {
-            ownerEmail: faker.internet.email(),
-            deployModelId: randomUUID().toString(),
-            codeType: CodeType.BACKEND,
-            bufferedSourceCodeFile: Buffer.from("")
-        }
-
-        test("should throw S3Exception", async () => {
-            s3Client.send = async function () {
-                throw new Error()
-            }
-
-            await expect(deployModelRepository.saveBackendSourceCode(saveBackendSourceCodeInput)).rejects.toThrow(S3Exception)
-        })
-
-        test("should save a backend source code", async () => {
-            s3Client.send = async function () {}
-            jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
-
-            const output = await deployModelRepository.saveBackendSourceCode(saveBackendSourceCodeInput)
-
-            expect(prismaClient.deployModel.update).toBeCalledWith({
-                where: {id: saveBackendSourceCodeInput.deployModelId},
-                data: {
-                    backendSourceCodePath: `sourceCode/${saveBackendSourceCodeInput.ownerEmail}-${saveBackendSourceCodeInput.deployModelId}-${saveBackendSourceCodeInput.codeType}-sourceCode.zip`
+                    sourceCodePath: `sourceCode/${saveSourceCodeInput.ownerEmail}-${saveSourceCodeInput.deployModelId}-sourceCode.zip`
                 }
             })
             expect(output).toEqual(deployModelEntity)
