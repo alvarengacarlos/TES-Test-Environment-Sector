@@ -85,7 +85,7 @@ describe("DeployModelController", () => {
 
         const uploadSourceCodeDtoOutput = new UploadSourceCodeDtoOutput(
             uploadSourceCodeDtoInput.deployModelId,
-            `sourceCode/${ownerEmail}-${uploadSourceCodeDtoInput.deployModelId}-${uploadSourceCodeDtoInput.deployModelId}-sourceCode.zip`
+            `${ownerEmail}-${uploadSourceCodeDtoInput.deployModelId}-${uploadSourceCodeDtoInput.deployModelId}-sourceCode.zip`
         )
 
         test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
@@ -94,6 +94,14 @@ describe("DeployModelController", () => {
             const httpResponse = await deployModelController.uploadSourceCode(httpRequest)
 
             expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with AWS_CREDENTIALS_CONFIGURATION_MISSING api status code", async () => {
+            jest.spyOn(uploadSourceCodeUseCase, "execute").mockRejectedValue(new AwsCredentialsConfigurationMissingException())
+
+            const httpResponse = await deployModelController.uploadSourceCode(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.AWS_CREDENTIALS_CONFIGURATION_MISSING, "Aws credentials configuration missing", null))
         })
 
         test("should return internal server error http response", async () => {

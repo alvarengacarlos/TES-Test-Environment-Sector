@@ -10,6 +10,9 @@ import {
 } from "../../../src/use-case/UploadSourceCodeUseCase";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {DeployModelDoesNotExistException} from "../../../src/exception/DeployModelDoesNotExistException";
+import {
+    AwsCredentialsConfigurationMissingException
+} from "../../../src/exception/AwsCredentialsConfigurationMissingException";
 
 describe("UploadSourceCodeUseCase", () => {
     const deployModelRepository = mockDeep<DeployModelRepository>()
@@ -18,20 +21,6 @@ describe("UploadSourceCodeUseCase", () => {
     const uploadSourceCodeDtoInput = new UploadSourceCodeDtoInput(
         randomUUID().toString(),
         Buffer.from("")
-    )
-
-    const ownerEmail = faker.internet.email()
-    const deployModelEntity = new DeployModelEntity(
-        uploadSourceCodeDtoInput.deployModelId,
-        faker.internet.domainName(),
-        ownerEmail,
-        "",
-        `${ownerEmail}-${uploadSourceCodeDtoInput.deployModelId}-${uploadSourceCodeDtoInput.deployModelId}-awsCredentials`
-    )
-
-    const uploadSourceCodeDtoOutput = new UploadSourceCodeDtoOutput(
-        deployModelEntity.id,
-        deployModelEntity.sourceCodePath
     )
 
     describe("execute", () => {
@@ -45,7 +34,36 @@ describe("UploadSourceCodeUseCase", () => {
             })
         })
 
+        test("should throw AwsCredentialsConfigurationMissingException", async () => {
+            const deployModelEntity = new DeployModelEntity(
+                uploadSourceCodeDtoInput.deployModelId,
+                faker.internet.domainName(),
+                faker.internet.email(),
+                "",
+                ""
+            )
+            jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
+
+            await expect(uploadSourceCodeUseCase.execute(uploadSourceCodeDtoInput)).rejects.toThrow(AwsCredentialsConfigurationMissingException)
+
+            expect(deployModelRepository.findDeployModelById).toBeCalledWith({
+                deployModelId: uploadSourceCodeDtoInput.deployModelId
+            })
+        })
+
         test("should upload source code", async () => {
+            const ownerEmail = faker.internet.email()
+            const deployModelEntity = new DeployModelEntity(
+                uploadSourceCodeDtoInput.deployModelId,
+                faker.internet.domainName(),
+                ownerEmail,
+                "",
+                `${ownerEmail}-${uploadSourceCodeDtoInput.deployModelId}-${uploadSourceCodeDtoInput.deployModelId}-awsCredentials`
+            )
+            const uploadSourceCodeDtoOutput = new UploadSourceCodeDtoOutput(
+                deployModelEntity.id,
+                deployModelEntity.sourceCodePath
+            )
             jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
             jest.spyOn(deployModelRepository, "saveSourceCode").mockResolvedValue(deployModelEntity)
 
@@ -57,7 +75,8 @@ describe("UploadSourceCodeUseCase", () => {
             expect(deployModelRepository.saveSourceCode).toBeCalledWith({
                 ownerEmail: deployModelEntity.ownerEmail,
                 deployModelId: deployModelEntity.id,
-                bufferedSourceCodeFile: uploadSourceCodeDtoInput.bufferedSourceCodeFile
+                bufferedSourceCodeFile: uploadSourceCodeDtoInput.bufferedSourceCodeFile,
+                awsCredentialsPath: deployModelEntity.awsCredentialsPath
             })
             expect(output).toEqual(uploadSourceCodeDtoOutput)
         })

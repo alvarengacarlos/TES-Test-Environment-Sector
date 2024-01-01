@@ -1,5 +1,6 @@
 import {describe, expect, jest, test} from "@jest/globals"
 import {faker} from "@faker-js/faker";
+import {mockClient} from "aws-sdk-client-mock";
 
 import {randomUUID} from "crypto";
 
@@ -7,29 +8,42 @@ import {prismaClient} from "../../../src/infra/primaClient"
 import {DeployModelRepositoryImpl} from "../../../src/repository/DeployModelRepositoryImpl";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {s3Client} from "../../../src/infra/s3Client";
-import {S3Exception} from "../../../src/exception/S3Exception";
 import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
-import {CloudFormationException} from "../../../src/exception/CloudFormationException";
 import {cloudFormationClient} from "../../../src/infra/cloudFormationClient";
-
+import {CreateBucketCommand, GetObjectCommand, ListBucketsCommand, PutObjectCommand} from "@aws-sdk/client-s3";
+import {CreateSecretCommand, GetSecretValueCommand} from "@aws-sdk/client-secrets-manager";
+import {CreateStackCommand} from "@aws-sdk/client-cloudformation";
 
 describe("DeployModelRepositoryImpl", () => {
+    const secretsManagerClientMocked = mockClient(secretsManagerClient)
+    const s3ClientMocked = mockClient(s3Client)
+    const getS3ClientWithCredentialsMock = jest.fn(() => {
+        return s3Client
+    })
+    const cloudFormationClientMocked = mockClient(cloudFormationClient)
     const getCloudFormationClientWithCredentialsMock = jest.fn(() => {
         return cloudFormationClient
     })
-    const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient, getCloudFormationClientWithCredentialsMock)
+    const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient, getS3ClientWithCredentialsMock, getCloudFormationClientWithCredentialsMock)
     jest.spyOn(prismaClient, "$connect").mockResolvedValue()
     jest.spyOn(prismaClient, "$disconnect").mockResolvedValue()
 
     const ownerEmail = faker.internet.email()
 
+    const deployModelId = randomUUID().toString()
+    const awsCredentialsPath = `${ownerEmail}-${deployModelId}-awsCredentials`
     const deployModelEntity = new DeployModelEntity(
         randomUUID(),
         faker.internet.domainName(),
         ownerEmail,
         "",
-        "",
+        awsCredentialsPath,
     )
+
+    const awsCredentials = {
+        accessKeyId: "00000000000000000000",
+        secretAccessKey: "0000000000000000000000000000000000000000"
+    }
 
     describe("saveDeployModel", () => {
         const saveDeployModelInput = {
@@ -67,20 +81,16 @@ describe("DeployModelRepositoryImpl", () => {
     describe("saveSourceCode", () => {
         const saveSourceCodeInput = {
             ownerEmail: faker.internet.email(),
-            deployModelId: randomUUID().toString(),
-            bufferedSourceCodeFile: Buffer.from("")
+            deployModelId: deployModelId,
+            bufferedSourceCodeFile: Buffer.from(""),
+            awsCredentialsPath: awsCredentialsPath
         }
 
-        test("should throw S3Exception", async () => {
-            s3Client.send = async function () {
-                throw new Error()
-            }
-
-            await expect(deployModelRepository.saveSourceCode(saveSourceCodeInput)).rejects.toThrow(S3Exception)
-        })
-
-        test("should save source code", async () => {
-            s3Client.send = async function () {}
+        test("should create a bucket and save source code", async () => {
+            secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
+            s3ClientMocked.on(ListBucketsCommand).resolves({Buckets: [{Name: ""}]})
+                .on(CreateBucketCommand).resolves({})
+                .on(PutObjectCommand).resolves({})
             jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
 
             const output = await deployModelRepository.saveSourceCode(saveSourceCodeInput)
@@ -88,7 +98,24 @@ describe("DeployModelRepositoryImpl", () => {
             expect(prismaClient.deployModel.update).toBeCalledWith({
                 where: {id: saveSourceCodeInput.deployModelId},
                 data: {
-                    sourceCodePath: `sourceCode/${saveSourceCodeInput.ownerEmail}-${saveSourceCodeInput.deployModelId}-sourceCode.zip`
+                    sourceCodePath: `${saveSourceCodeInput.ownerEmail}-${saveSourceCodeInput.deployModelId}-sourceCode.zip`
+                }
+            })
+            expect(output).toEqual(deployModelEntity)
+        })
+
+        test("should save source code", async () => {
+            secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
+            s3ClientMocked.on(ListBucketsCommand).resolves({Buckets: [{Name: "source-code-s3-bucket"}]})
+                .on(PutObjectCommand).resolves({})
+            jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
+
+            const output = await deployModelRepository.saveSourceCode(saveSourceCodeInput)
+
+            expect(prismaClient.deployModel.update).toBeCalledWith({
+                where: {id: saveSourceCodeInput.deployModelId},
+                data: {
+                    sourceCodePath: `${saveSourceCodeInput.ownerEmail}-${saveSourceCodeInput.deployModelId}-sourceCode.zip`
                 }
             })
             expect(output).toEqual(deployModelEntity)
@@ -98,13 +125,13 @@ describe("DeployModelRepositoryImpl", () => {
     describe("saveAwsCredentials", () => {
         const saveAwsCredentialsInput = {
             ownerEmail: ownerEmail,
-            deployModelId: randomUUID().toString(),
+            deployModelId: deployModelId,
             accessKeyId: "00000000000000000000",
             secretAccessKey: "0000000000000000000000000000000000000000"
         }
 
         test("should save aws credentials", async () => {
-            secretsManagerClient.send = async function () {}
+            secretsManagerClientMocked.on(CreateSecretCommand).resolves({})
             jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
 
             const output = await deployModelRepository.saveAwsCredentials(saveAwsCredentialsInput)
@@ -112,7 +139,7 @@ describe("DeployModelRepositoryImpl", () => {
             expect(prismaClient.deployModel.update).toBeCalledWith({
                 where: {id: saveAwsCredentialsInput.deployModelId},
                 data: {
-                    awsCredentialsPath: `${saveAwsCredentialsInput.ownerEmail}-${saveAwsCredentialsInput.deployModelId}-awsCredentials`,
+                    awsCredentialsPath: awsCredentialsPath,
                 }
             })
             expect(output).toEqual(deployModelEntity)
@@ -120,48 +147,19 @@ describe("DeployModelRepositoryImpl", () => {
     })
 
     describe("createDeployModelInfra", () => {
-        const deployModelId = randomUUID().toString()
         const createDeployModelInfraInput = {
             deployModelId: deployModelId,
-            awsCredentialsPath: `${ownerEmail}-${deployModelId}-awsCredentials`
+            awsCredentialsPath: awsCredentialsPath
         }
-        const awsCredentials = {
-            accessKeyId: "00000000000000000000",
-            secretAccessKey: "0000000000000000000000000000000000000000"
-        }
-
-        test("should throw CloudFormationException", async () => {
-            secretsManagerClient.send = async function () {
-                return {
-                    SecretString: JSON.stringify(awsCredentials)
-                }
-            }
-            s3Client.send = async function () {
-                return {
-                    Body: {transformToString: () => "template body"}
-                }
-            }
-
-            cloudFormationClient.send = async function () {
-                throw new Error()
-            }
-
-            await expect(deployModelRepository.createDeployModelInfra(createDeployModelInfraInput)).rejects.toThrow(CloudFormationException)
-            expect(getCloudFormationClientWithCredentialsMock).toBeCalledWith(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
-        })
 
         test("should create a deploy model infra", async () => {
-            secretsManagerClient.send = async function () {
-                return {
-                    SecretString: JSON.stringify(awsCredentials)
+            secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
+            s3ClientMocked.on(GetObjectCommand).callsFake(() => Object.create({
+                Body: {
+                    transformToString: async () => "template body"
                 }
-            }
-            s3Client.send = async function () {
-                return {
-                    Body: {transformToString: () => "template body"}
-                }
-            }
-            cloudFormationClient.send = async function () {}
+            }))
+            cloudFormationClientMocked.on(CreateStackCommand).resolves({})
 
             await deployModelRepository.createDeployModelInfra(createDeployModelInfraInput)
 

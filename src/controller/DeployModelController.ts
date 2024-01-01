@@ -49,6 +49,10 @@ export class DeployModelController {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
             }
 
+            if (error instanceof AwsCredentialsConfigurationMissingException) {
+                return HttpResponse.badRequest(ApiStatusCode.AWS_CREDENTIALS_CONFIGURATION_MISSING, error.message, null)
+            }
+
             return HttpResponse.internalServerError()
         }
     }
