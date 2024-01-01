@@ -1,24 +1,29 @@
 import {PrismaClient} from "@prisma/client";
+import {CloudFormationClient, CreateStackCommand, DeleteStackCommand} from "@aws-sdk/client-cloudformation";
+import {PutObjectCommand, GetObjectCommand, S3Client} from "@aws-sdk/client-s3";
 
 import {
     DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
     SaveSourceCodeInput,
-    SaveDeployModelInput,
+    SaveDeployModelInput, CreateDeployModelInfraInput,
 } from "./DeployModelRepository";
 import {Logger} from "../util/Logger";
 import {DeployModelEntity} from "../entity/DeployModelEntity";
 import {DatabaseException} from "../exception/DatabaseException";
-import {PutObjectCommand, S3Client} from "@aws-sdk/client-s3";
 import {S3Exception} from "../exception/S3Exception";
-import {CreateSecretCommand, SecretsManagerClient} from "@aws-sdk/client-secrets-manager";
+import {CreateSecretCommand, GetSecretValueCommand, SecretsManagerClient} from "@aws-sdk/client-secrets-manager";
 import {SecretsManagerException} from "../exception/SecretsManagerException";
+import {CloudFormationException} from "../exception/CloudFormationException";
+import {getCloudFormationClientWithCredentials} from "../infra/cloudFormationClient";
+import {AwsCredentialsEntity} from "../entity/AwsCredentialsEntity";
 
 export class DeployModelRepositoryImpl implements DeployModelRepository {
 
     constructor(
         private readonly prismaClient: PrismaClient,
         private readonly s3Client: S3Client,
-        private readonly secretsManagerClient: SecretsManagerClient
+        private readonly secretsManagerClient: SecretsManagerClient,
+        private readonly getCloudFormationClient = getCloudFormationClientWithCredentials
     ) {
     }
 
@@ -128,7 +133,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             Logger.info(this.constructor.name, this.saveSourceCode.name, "put object command executed with success")
             return sourceCodePath
         } catch (error: any) {
-            Logger.error(this.constructor.name, this.saveSourceCode.name, `put object command throw ${error.message}`)
+            Logger.error(this.constructor.name, this.saveSourceCode.name, `S3 client throw ${error.message}`)
             throw new S3Exception()
         }
     }
@@ -172,16 +177,89 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
 
     private async saveSecrets(name: string, secret: string) {
         try {
-            Logger.info(this.constructor.name, this.saveSecrets.name, `saving secrets`)
+            Logger.info(this.constructor.name, this.saveSecrets.name, `executing create secret command`)
             const createSecretCommand = new CreateSecretCommand({
                 Name: name,
                 SecretString: secret,
             })
             await this.secretsManagerClient.send(createSecretCommand)
-            Logger.info(this.constructor.name, this.saveSecrets.name, `secret saved with success`)
+            Logger.info(this.constructor.name, this.saveSecrets.name, `create secret command executed with success`)
         } catch (error: any) {
             Logger.error(this.constructor.name, this.saveSecrets.name, `Secrets manager client throw ${error.message}`)
             throw new SecretsManagerException()
+        }
+    }
+
+    async createDeployModelInfra(createDeployModelInfraInput: CreateDeployModelInfraInput): Promise<void> {
+        const awsCredentials = await this.findAwsCredentials(createDeployModelInfraInput.awsCredentialsPath)
+        const cloudFormationClient = this.getCloudFormationClient(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+        const templateBody = await this.findTemplateUrl()
+        const stackName = `container-model-${createDeployModelInfraInput.deployModelId}`
+
+        try {
+            Logger.info(this.constructor.name, this.createDeployModelInfra.name, `executing create stack command`)
+            const createStackCommand = new CreateStackCommand({
+                StackName: stackName,
+                TemplateBody: templateBody
+            })
+
+            await cloudFormationClient.send(createStackCommand)
+            Logger.info(this.constructor.name, this.createDeployModelInfra.name, `create stack command executed with success`)
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.createDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
+            await this.deleteDeployModelInfra(stackName, cloudFormationClient)
+            throw new CloudFormationException()
+        }
+    }
+
+    private async findAwsCredentials(awsCredentialsPath: string): Promise<AwsCredentialsEntity> {
+        try {
+            Logger.info(this.constructor.name, this.findAwsCredentials.name, "executing get secret value command")
+            const getSecretValueCommand = new GetSecretValueCommand({
+                SecretId: awsCredentialsPath
+            })
+            const output = await this.secretsManagerClient.send(getSecretValueCommand)
+
+            Logger.info(this.constructor.name, this.findAwsCredentials.name, "get secret value command executed with success")
+            const awsCredentials = JSON.parse(String(output?.SecretString))
+
+            return new AwsCredentialsEntity(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.findAwsCredentials.name, `Secrets Manager client throw ${error.message}`)
+            throw new SecretsManagerException()
+        }
+    }
+
+    private async findTemplateUrl(): Promise<string> {
+        try {
+            Logger.info(this.constructor.name, this.findTemplateUrl.name, `executing get object command`)
+            const getObjectCommand = new GetObjectCommand({
+                Bucket: String(process.env.S3_BUCKET_NAME),
+                Key: "ContainerModel.yaml"
+            })
+
+            const output = await this.s3Client.send(getObjectCommand)
+
+            Logger.info(this.constructor.name, this.findTemplateUrl.name, `get object command executed with success`)
+            return String(await output.Body?.transformToString())
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.findTemplateUrl.name, `S3 client throw ${error.message}`)
+            throw new S3Exception()
+        }
+    }
+
+    private async deleteDeployModelInfra(stackName: string, cloudFormationClient: CloudFormationClient) {
+        try {
+            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `executing delete stack command`)
+            const deleteStackCommand = new DeleteStackCommand({
+                StackName: stackName,
+            })
+
+            await cloudFormationClient.send(deleteStackCommand)
+            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `delete stack command executed with success`)
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.deleteDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
+            throw new CloudFormationException()
         }
     }
 }

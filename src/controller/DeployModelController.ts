@@ -15,12 +15,19 @@ import {
     SaveAwsCredentialsDtoOutput,
     SaveAwsCredentialsUseCase
 } from "../use-case/SaveAwsCredentialsUseCase";
+import {
+    CreateDeployModelInfraDtoInput,
+    CreateDeployModelInfraDtoOutput,
+    CreateDeployModelInfraUseCase
+} from "../use-case/CreateDeployModelInfraUseCase";
+import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
 
 export class DeployModelController {
     constructor(
         private createDeployModelUseCase: CreateDeployModelUseCase,
         private uploadSourceCodeUseCase: UploadSourceCodeUseCase,
-        private saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase
+        private saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase,
+        private createDeployModelInfraUseCase: CreateDeployModelInfraUseCase
     ) {
     }
 
@@ -54,6 +61,24 @@ export class DeployModelController {
         } catch (error: any) {
             if (error instanceof DeployModelDoesNotExistException) {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            return HttpResponse.internalServerError()
+        }
+    }
+
+    async createDeployModelInfra(httpRequest: HttpRequest<CreateDeployModelInfraDtoInput>): Promise<HttpResponse<CreateDeployModelInfraDtoOutput | null>> {
+        try {
+            const createDeployModelInfraDtoOutput = await this.createDeployModelInfraUseCase.execute(httpRequest.data)
+            return HttpResponse.ok("deploy model infra created with success", createDeployModelInfraDtoOutput)
+
+        } catch (error: any) {
+            if (error instanceof DeployModelDoesNotExistException) {
+                return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            if (error instanceof AwsCredentialsConfigurationMissingException) {
+                return HttpResponse.badRequest(ApiStatusCode.AWS_CREDENTIALS_CONFIGURATION_MISSING, error.message, null)
             }
 
             return HttpResponse.internalServerError()

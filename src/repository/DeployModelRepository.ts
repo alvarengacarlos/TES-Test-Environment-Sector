@@ -5,6 +5,7 @@ export interface DeployModelRepository {
     findDeployModelById(findDeployModelByIdInput: FindDeployModelByIdInput): Promise<DeployModelEntity | null>
     saveSourceCode(saveSourceCodeInput: SaveSourceCodeInput): Promise<DeployModelEntity>
     saveAwsCredentials(saveAwsCredentialsInput: SaveAwsCredentialsInput): Promise<DeployModelEntity>
+    createDeployModelInfra(createDeployModelInfraInput: CreateDeployModelInfraInput): Promise<void>
 }
 
 export type SaveDeployModelInput = {
@@ -27,4 +28,9 @@ export type SaveAwsCredentialsInput = {
     deployModelId: string,
     accessKeyId: string,
     secretAccessKey: string
+}
+
+export type CreateDeployModelInfraInput = {
+    deployModelId: string
+    awsCredentialsPath: string
 }
