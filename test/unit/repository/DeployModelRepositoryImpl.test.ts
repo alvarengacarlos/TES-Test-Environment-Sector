@@ -9,10 +9,15 @@ import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {s3Client} from "../../../src/infra/s3Client";
 import {S3Exception} from "../../../src/exception/S3Exception";
 import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
+import {CloudFormationException} from "../../../src/exception/CloudFormationException";
+import {cloudFormationClient} from "../../../src/infra/cloudFormationClient";
 
 
 describe("DeployModelRepositoryImpl", () => {
-    const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
+    const getCloudFormationClientWithCredentialsMock = jest.fn(() => {
+        return cloudFormationClient
+    })
+    const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient, getCloudFormationClientWithCredentialsMock)
     jest.spyOn(prismaClient, "$connect").mockResolvedValue()
     jest.spyOn(prismaClient, "$disconnect").mockResolvedValue()
 
@@ -111,6 +116,56 @@ describe("DeployModelRepositoryImpl", () => {
                 }
             })
             expect(output).toEqual(deployModelEntity)
+        })
+    })
+
+    describe("createDeployModelInfra", () => {
+        const deployModelId = randomUUID().toString()
+        const createDeployModelInfraInput = {
+            deployModelId: deployModelId,
+            awsCredentialsPath: `${ownerEmail}-${deployModelId}-awsCredentials`
+        }
+        const awsCredentials = {
+            accessKeyId: "00000000000000000000",
+            secretAccessKey: "0000000000000000000000000000000000000000"
+        }
+
+        test("should throw CloudFormationException", async () => {
+            secretsManagerClient.send = async function () {
+                return {
+                    SecretString: JSON.stringify(awsCredentials)
+                }
+            }
+            s3Client.send = async function () {
+                return {
+                    Body: {transformToString: () => "template body"}
+                }
+            }
+
+            cloudFormationClient.send = async function () {
+                throw new Error()
+            }
+
+            await expect(deployModelRepository.createDeployModelInfra(createDeployModelInfraInput)).rejects.toThrow(CloudFormationException)
+            expect(getCloudFormationClientWithCredentialsMock).toBeCalledWith(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+        })
+
+        test("should create a deploy model infra", async () => {
+            secretsManagerClient.send = async function () {
+                return {
+                    SecretString: JSON.stringify(awsCredentials)
+                }
+            }
+            s3Client.send = async function () {
+                return {
+                    Body: {transformToString: () => "template body"}
+                }
+            }
+            cloudFormationClient.send = async function () {}
+
+            await deployModelRepository.createDeployModelInfra(createDeployModelInfraInput)
+
+            expect(getCloudFormationClientWithCredentialsMock).toBeCalledWith(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
         })
     })
 })

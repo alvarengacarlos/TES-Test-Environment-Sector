@@ -23,15 +23,24 @@ import {
     SaveAwsCredentialsDtoOutput,
     SaveAwsCredentialsUseCase
 } from "../../../src/use-case/SaveAwsCredentialsUseCase";
+import {
+    CreateDeployModelInfraDtoInput, CreateDeployModelInfraDtoOutput,
+    CreateDeployModelInfraUseCase
+} from "../../../src/use-case/CreateDeployModelInfraUseCase";
+import {
+    AwsCredentialsConfigurationMissingException
+} from "../../../src/exception/AwsCredentialsConfigurationMissingException";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
     const uploadSourceCodeUseCase = mockDeep<UploadSourceCodeUseCase>()
     const saveAwsCredentialsUseCase = mockDeep<SaveAwsCredentialsUseCase>()
+    const createDeployModelInfraUseCase = mockDeep<CreateDeployModelInfraUseCase>()
     const deployModelController = new DeployModelController(
         createDeployModelUseCase,
         uploadSourceCodeUseCase,
-        saveAwsCredentialsUseCase
+        saveAwsCredentialsUseCase,
+        createDeployModelInfraUseCase
     )
     const ownerEmail = faker.internet.email()
 
@@ -142,6 +151,49 @@ describe("DeployModelController", () => {
 
             expect(saveAwsCredentialsUseCase.execute).toBeCalledWith(httpRequest.data)
             expect(httpResponse).toEqual(HttpResponse.ok("aws credentials saved with success", saveAwsCredentialsDtoOutput))
+        })
+    })
+
+    describe("createDeployModelInfra", () => {
+        const createDeployModelInfraDtoInput = new CreateDeployModelInfraDtoInput(
+            randomUUID().toString(),
+        )
+        const httpRequest = new HttpRequest<CreateDeployModelInfraDtoInput>(createDeployModelInfraDtoInput)
+
+        const createDeployModelInfraDtoOutput = new CreateDeployModelInfraDtoOutput(
+            createDeployModelInfraDtoInput.deployModelId,
+        )
+
+        test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with AWS_CREDENTIALS_CONFIGURATION_MISSING api status code", async () => {
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new AwsCredentialsConfigurationMissingException())
+
+            const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.AWS_CREDENTIALS_CONFIGURATION_MISSING, "Aws credentials configuration missing", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockResolvedValue(createDeployModelInfraDtoOutput)
+
+            const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.ok("deploy model infra created with success", createDeployModelInfraDtoOutput))
         })
     })
 })

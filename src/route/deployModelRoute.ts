@@ -18,12 +18,14 @@ import {uploadSourceCodeValidator} from "../middleware/uploadFile";
 import {s3Client} from "../infra/s3Client";
 import {SaveAwsCredentialsDtoInput, SaveAwsCredentialsUseCase} from "../use-case/SaveAwsCredentialsUseCase";
 import {secretsManagerClient} from "../infra/secretsManagerClient";
+import {CreateDeployModelInfraDtoInput, CreateDeployModelInfraUseCase} from "../use-case/CreateDeployModelInfraUseCase";
 
 const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
 const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
 const uploadSourceCodeUseCase = new UploadSourceCodeUseCase(deployModelRepository)
 const saveAwsCredentialsUseCase = new SaveAwsCredentialsUseCase(deployModelRepository)
-const deployModelController = new DeployModelController(createDeployModelUseCase, uploadSourceCodeUseCase, saveAwsCredentialsUseCase)
+const deployModelInfraUseCase = new CreateDeployModelInfraUseCase(deployModelRepository)
+const deployModelController = new DeployModelController(createDeployModelUseCase, uploadSourceCodeUseCase, saveAwsCredentialsUseCase, deployModelInfraUseCase)
 const deployModelValidator = new DeployModelValidator()
 
 export const deployModelRouter = express.Router()
@@ -64,6 +66,19 @@ deployModelRouter.post("/aws-credentials", deployModelValidator.saveAwsCredentia
             secretAccessKey: request.body.secretAccessKey
         })
         const httpResponse = await deployModelController.saveAwsCredentials(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+deployModelRouter.post("/infra", deployModelValidator.createDeployModelInfra, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<CreateDeployModelInfraDtoInput>({
+            deployModelId: request.body.deployModelId,
+        })
+        const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
 
     } catch (error: any) {

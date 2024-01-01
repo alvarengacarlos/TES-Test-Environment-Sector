@@ -17,6 +17,7 @@ provider:
         - Effect: Allow
           Action:
             - "s3:PutObject"
+            - "s3:GetObject"
           Resource: !Join
             - ""
             - - ${self:custom.tesS3BucketArn}
@@ -24,6 +25,7 @@ provider:
         - Effect: Allow
           Action:
             - "secretsmanager:CreateSecret"
+            - "secretsmanager:GetSecretValue"
           Resource: !Sub "arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:*"
 
 package:
