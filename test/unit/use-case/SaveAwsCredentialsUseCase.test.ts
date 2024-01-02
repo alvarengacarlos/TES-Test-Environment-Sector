@@ -31,6 +31,7 @@ describe("SaveAwsCredentialsUseCase", () => {
         ownerEmail,
         "",
         `${ownerEmail}-${deployModelId}-awsCredentials`,
+        ""
     )
 
     const saveAwsCredentialsDtoOutput = new SaveAwsCredentialsDtoOutput(

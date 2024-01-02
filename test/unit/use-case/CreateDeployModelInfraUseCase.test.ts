@@ -11,6 +11,7 @@ import {randomUUID} from "crypto";
 import {DeployModelDoesNotExistException} from "../../../src/exception/DeployModelDoesNotExistException";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {AwsCredentialsConfigurationMissingException} from "../../../src/exception/AwsCredentialsConfigurationMissingException"
+import {InfrastructureAlreadyProvisioned} from "../../../src/exception/InfrastructureAlreadyProvisioned";
 
 describe("CreateDeployModelInfraUseCase", () => {
     const deployModelRepository = mockDeep<DeployModelRepository>()
@@ -27,6 +28,7 @@ describe("CreateDeployModelInfraUseCase", () => {
         ownerEmail,
         "",
         `${ownerEmail}-${deployModelId}-awsCredentials`,
+        ""
     )
 
     const createDeployModelInfraDtoOutput = new CreateDeployModelInfraDtoOutput(deployModelId)
@@ -41,6 +43,23 @@ describe("CreateDeployModelInfraUseCase", () => {
             })
         })
 
+        test("should throw InfrastructureAlreadyProvisioned", async () => {
+            const deployModelEntity = new DeployModelEntity(
+                deployModelId,
+                deployModelName,
+                ownerEmail,
+                "",
+                "",
+                `container-model-${deployModelId}`
+            )
+            jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
+
+            await expect(createDeployModelInfraUseCase.execute(createDeployModelInfraDtoInput)).rejects.toThrow(InfrastructureAlreadyProvisioned)
+            expect(deployModelRepository.findDeployModelById).toBeCalledWith({
+                deployModelId: deployModelId
+            })
+        })
+
         test("should throw AwsCredentialsConfigurationMissingException", async () => {
             const deployModelEntity = new DeployModelEntity(
                 deployModelId,
@@ -48,6 +67,7 @@ describe("CreateDeployModelInfraUseCase", () => {
                 ownerEmail,
                 "",
                 "",
+                ""
             )
             jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
 

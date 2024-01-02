@@ -49,7 +49,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.deployModelName,
                 result.ownerEmail,
                 result.sourceCodePath,
-                result.awsCredentialsPath
+                result.awsCredentialsPath,
+                result.cloudFormationStackName
             )
 
 
@@ -81,7 +82,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.deployModelName,
                 result.ownerEmail,
                 result.sourceCodePath,
-                result.awsCredentialsPath
+                result.awsCredentialsPath,
+                result.cloudFormationStackName
             )
 
         } catch (error: any) {
@@ -117,7 +119,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.deployModelName,
                 result.ownerEmail,
                 result.sourceCodePath,
-                result.awsCredentialsPath
+                result.awsCredentialsPath,
+                result.cloudFormationStackName
             )
 
         } catch (error: any) {
@@ -241,7 +244,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 result.deployModelName,
                 result.ownerEmail,
                 result.sourceCodePath,
-                result.awsCredentialsPath
+                result.awsCredentialsPath,
+                result.cloudFormationStackName
             )
 
         } catch (error: any) {
@@ -294,6 +298,22 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             Logger.error(this.constructor.name, this.createDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
             await this.deleteDeployModelInfra(stackName, cloudFormationClient)
             throw new CloudFormationException()
+        }
+
+        try {
+            await this.prismaClient.$connect()
+            await this.prismaClient.deployModel.update({
+                where: {id: createDeployModelInfraInput.deployModelId},
+                data: {
+                    cloudFormationStackName: stackName
+                }
+            })
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.createDeployModelInfra.name, `Prisma client throw ${error.message}`)
+            throw new DatabaseException()
+        } finally {
+            await this.prismaClient.$disconnect()
         }
     }
 

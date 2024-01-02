@@ -9,9 +9,10 @@ datasource db {
 }
 
 model DeployModel {
-  id                 String @id @default(uuid()) @map("_id")
-  deployModelName    String
-  ownerEmail         String
-  sourceCodePath     String @default("")
-  awsCredentialsPath String @default("")
+  id                      String @id @default(uuid()) @map("_id")
+  deployModelName         String
+  ownerEmail              String
+  sourceCodePath          String @default("")
+  awsCredentialsPath      String @default("")
+  cloudFormationStackName String @default("")
 }
