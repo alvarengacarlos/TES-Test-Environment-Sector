@@ -30,6 +30,7 @@ import {
 import {
     AwsCredentialsConfigurationMissingException
 } from "../../../src/exception/AwsCredentialsConfigurationMissingException";
+import {InfrastructureAlreadyProvisioned} from "../../../src/exception/InfrastructureAlreadyProvisioned";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
@@ -178,6 +179,14 @@ describe("DeployModelController", () => {
             const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
 
             expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with INFRASTRUCTURE_ALREADY_PROVISIONED api status code", async () => {
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new InfrastructureAlreadyProvisioned())
+
+            const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_ALREADY_PROVISIONED, "Infrastructure already provisioned", null))
         })
 
         test("should return bad request http response with AWS_CREDENTIALS_CONFIGURATION_MISSING api status code", async () => {

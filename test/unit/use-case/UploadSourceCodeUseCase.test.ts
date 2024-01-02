@@ -40,6 +40,7 @@ describe("UploadSourceCodeUseCase", () => {
                 faker.internet.domainName(),
                 faker.internet.email(),
                 "",
+                "",
                 ""
             )
             jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
@@ -58,7 +59,8 @@ describe("UploadSourceCodeUseCase", () => {
                 faker.internet.domainName(),
                 ownerEmail,
                 "",
-                `${ownerEmail}-${uploadSourceCodeDtoInput.deployModelId}-${uploadSourceCodeDtoInput.deployModelId}-awsCredentials`
+                `${ownerEmail}-${uploadSourceCodeDtoInput.deployModelId}-${uploadSourceCodeDtoInput.deployModelId}-awsCredentials`,
+                ""
             )
             const uploadSourceCodeDtoOutput = new UploadSourceCodeDtoOutput(
                 deployModelEntity.id,

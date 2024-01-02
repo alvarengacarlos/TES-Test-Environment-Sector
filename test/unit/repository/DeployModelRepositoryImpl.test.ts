@@ -33,11 +33,12 @@ describe("DeployModelRepositoryImpl", () => {
     const deployModelId = randomUUID().toString()
     const awsCredentialsPath = `${ownerEmail}-${deployModelId}-awsCredentials`
     const deployModelEntity = new DeployModelEntity(
-        randomUUID(),
+        deployModelId,
         faker.internet.domainName(),
         ownerEmail,
         "",
         awsCredentialsPath,
+        ""
     )
 
     const awsCredentials = {
@@ -155,6 +156,16 @@ describe("DeployModelRepositoryImpl", () => {
             ownerEmail: ownerEmail
         }
 
+        const cloudFormationStackName = `container-model-${deployModelId}`
+        const deployModelEntity = new DeployModelEntity(
+            deployModelId,
+            faker.internet.domainName(),
+            ownerEmail,
+            "",
+            awsCredentialsPath,
+            cloudFormationStackName
+        )
+
         test("should create a deploy model infra", async () => {
             secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
             s3ClientMocked.on(GetObjectCommand).callsFake(() => Object.create({
@@ -163,9 +174,16 @@ describe("DeployModelRepositoryImpl", () => {
                 }
             }))
             cloudFormationClientMocked.on(CreateStackCommand).resolves({})
+            jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
 
             await deployModelRepository.createDeployModelInfra(createDeployModelInfraInput)
 
+            expect(prismaClient.deployModel.update).toBeCalledWith({
+                where: {id: deployModelId},
+                data: {
+                    cloudFormationStackName: cloudFormationStackName
+                }
+            })
             expect(getCloudFormationClientWithCredentialsMock).toBeCalledWith(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
         })
     })

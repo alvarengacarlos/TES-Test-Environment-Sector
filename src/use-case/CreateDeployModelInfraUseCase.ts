@@ -1,6 +1,7 @@
 import {DeployModelRepository} from "../repository/DeployModelRepository";
 import {DeployModelDoesNotExistException} from "../exception/DeployModelDoesNotExistException";
 import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
+import {InfrastructureAlreadyProvisioned} from "../exception/InfrastructureAlreadyProvisioned";
 
 export class CreateDeployModelInfraUseCase {
     constructor(
@@ -15,6 +16,10 @@ export class CreateDeployModelInfraUseCase {
 
         if (!deployModel) {
             throw new DeployModelDoesNotExistException()
+        }
+
+        if (deployModel.cloudFormationStackName != "") {
+            throw new InfrastructureAlreadyProvisioned()
         }
 
         if (deployModel.awsCredentialsPath == "") {

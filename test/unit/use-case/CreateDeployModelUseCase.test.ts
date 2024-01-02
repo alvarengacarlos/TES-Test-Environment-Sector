@@ -29,6 +29,7 @@ describe("CreateDeployModelUseCase", () => {
         ownerEmail,
         "",
         "",
+        ""
     )
 
     const createDeployModelDtoOutput = new CreateDeployModelDtoOutput(

@@ -21,6 +21,7 @@ import {
     CreateDeployModelInfraUseCase
 } from "../use-case/CreateDeployModelInfraUseCase";
 import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
+import {InfrastructureAlreadyProvisioned} from "../exception/InfrastructureAlreadyProvisioned";
 
 export class DeployModelController {
     constructor(
@@ -79,6 +80,10 @@ export class DeployModelController {
         } catch (error: any) {
             if (error instanceof DeployModelDoesNotExistException) {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            if (error instanceof InfrastructureAlreadyProvisioned) {
+                return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_ALREADY_PROVISIONED, error.message, null)
             }
 
             if (error instanceof AwsCredentialsConfigurationMissingException) {
