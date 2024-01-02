@@ -11,7 +11,7 @@ import {randomUUID} from "crypto";
 import {DeployModelDoesNotExistException} from "../../../src/exception/DeployModelDoesNotExistException";
 import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {AwsCredentialsConfigurationMissingException} from "../../../src/exception/AwsCredentialsConfigurationMissingException"
-import {InfrastructureAlreadyProvisioned} from "../../../src/exception/InfrastructureAlreadyProvisioned";
+import {InfrastructureAlreadyProvisionedException} from "../../../src/exception/InfrastructureAlreadyProvisionedException";
 
 describe("CreateDeployModelInfraUseCase", () => {
     const deployModelRepository = mockDeep<DeployModelRepository>()
@@ -43,7 +43,7 @@ describe("CreateDeployModelInfraUseCase", () => {
             })
         })
 
-        test("should throw InfrastructureAlreadyProvisioned", async () => {
+        test("should throw InfrastructureAlreadyProvisionedException", async () => {
             const deployModelEntity = new DeployModelEntity(
                 deployModelId,
                 deployModelName,
@@ -54,7 +54,7 @@ describe("CreateDeployModelInfraUseCase", () => {
             )
             jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
 
-            await expect(createDeployModelInfraUseCase.execute(createDeployModelInfraDtoInput)).rejects.toThrow(InfrastructureAlreadyProvisioned)
+            await expect(createDeployModelInfraUseCase.execute(createDeployModelInfraDtoInput)).rejects.toThrow(InfrastructureAlreadyProvisionedException)
             expect(deployModelRepository.findDeployModelById).toBeCalledWith({
                 deployModelId: deployModelId
             })
