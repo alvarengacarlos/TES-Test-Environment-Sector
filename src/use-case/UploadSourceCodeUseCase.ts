@@ -1,5 +1,6 @@
 import {DeployModelRepository} from "../repository/DeployModelRepository";
 import {DeployModelDoesNotExistException} from "../exception/DeployModelDoesNotExistException";
+import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
 
 export class UploadSourceCodeUseCase {
     constructor(
@@ -16,10 +17,15 @@ export class UploadSourceCodeUseCase {
             throw new DeployModelDoesNotExistException()
         }
 
+        if (deployModel.awsCredentialsPath == "") {
+            throw new AwsCredentialsConfigurationMissingException()
+        }
+
         const result = await this.deployModelRepository.saveSourceCode({
             ownerEmail: deployModel.ownerEmail,
             deployModelId: deployModel.id,
-            bufferedSourceCodeFile: uploadSourceCodeDtoInput.bufferedSourceCodeFile
+            bufferedSourceCodeFile: uploadSourceCodeDtoInput.bufferedSourceCodeFile,
+            awsCredentialsPath: deployModel.awsCredentialsPath
         })
 
         return new UploadSourceCodeDtoOutput(

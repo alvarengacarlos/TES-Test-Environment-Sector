@@ -20,7 +20,8 @@ export type FindDeployModelByIdInput = {
 export type SaveSourceCodeInput = {
     ownerEmail: string,
     deployModelId: string,
-    bufferedSourceCodeFile: Buffer
+    bufferedSourceCodeFile: Buffer,
+    awsCredentialsPath: string
 }
 
 export type SaveAwsCredentialsInput = {

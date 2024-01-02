@@ -1,14 +1,16 @@
 import {describe, expect, jest, test} from "@jest/globals";
 import {faker} from "@faker-js/faker";
+import {mockClient} from "aws-sdk-client-mock";
 
 import {UserRepositoryImpl} from "../../../src/repository/UserRepositoryImpl";
 import {cognitoClient} from "../../../src/infra/cognitoClient";
 import {UserEntity} from "../../../src/entity/UserEntity";
 import {AuthenticationTokenEntity} from "../../../src/entity/AuthenticationTokenEntity";
 import {
-    CodeMismatchException,
+    AdminInitiateAuthCommand,
+    CodeMismatchException, ConfirmSignUpCommand,
     ExpiredCodeException,
-    NotAuthorizedException, UsernameExistsException,
+    NotAuthorizedException, SignUpCommand, UsernameExistsException,
     UserNotConfirmedException,
     UserNotFoundException
 } from "@aws-sdk/client-cognito-identity-provider";
@@ -20,6 +22,7 @@ import {InvalidConfirmationCodeException} from "../../../src/exception/InvalidCo
 import {EmailExistsException} from "../../../src/exception/EmailExistsException";
 
 describe("UserRepositoryImpl", () => {
+    const cognitoClientMocked = mockClient(cognitoClient)
     const userRepository = new UserRepositoryImpl(cognitoClient)
 
     const email = faker.internet.email()
@@ -33,26 +36,22 @@ describe("UserRepositoryImpl", () => {
         const userEntity = new UserEntity(email, password)
 
         test("should throw EmailExistsException", async () => {
-            cognitoClient.send = async function() {
-                throw new UsernameExistsException({
+            cognitoClientMocked.on(SignUpCommand).rejects(new UsernameExistsException({
                     message: "",
                     $metadata: {}
-                })
-            }
+            }))
 
             await expect(userRepository.saveUser(saveUserInput)).rejects.toThrow(EmailExistsException)
         })
 
         test("should throw CognitoException", async () => {
-            cognitoClient.send = async function() {
-                throw new Error()
-            }
+            cognitoClientMocked.on(SignUpCommand).rejects(new Error())
 
             await expect(userRepository.saveUser(saveUserInput)).rejects.toThrow(CognitoException)
         })
 
         test("should save a user", async () => {
-            cognitoClient.send = async function() {}
+            cognitoClientMocked.on(SignUpCommand).resolves({})
 
             const output = await userRepository.saveUser(saveUserInput)
 
@@ -69,46 +68,38 @@ describe("UserRepositoryImpl", () => {
 
 
         test("should throw ExpiredConfirmationCodeException", async () => {
-            cognitoClient.send = async function () {
-                throw new ExpiredCodeException({
-                    message: "",
-                    $metadata: {}
-                })
-            }
+            cognitoClientMocked.on(ConfirmSignUpCommand).rejects(new ExpiredCodeException({
+                message: "",
+                $metadata: {}
+            }))
 
             await expect(userRepository.updateUserEmailToVerified(updateUserEmailToVerifiedInput)).rejects.toThrow(ExpiredConfirmationCodeException)
         })
 
         test("should throw InvalidConfirmationCodeException", async () => {
-            cognitoClient.send = async function () {
-                throw new CodeMismatchException({
-                    message: "",
-                    $metadata: {}
-                })
-            }
+            cognitoClientMocked.on(ConfirmSignUpCommand).rejects(new CodeMismatchException({
+                message: "",
+                $metadata: {}
+            }))
 
             await expect(userRepository.updateUserEmailToVerified(updateUserEmailToVerifiedInput)).rejects.toThrow(InvalidConfirmationCodeException)
 
-            cognitoClient.send = async function () {
-                throw new NotAuthorizedException({
-                    message: "",
-                    $metadata: {}
-                })
-            }
+            cognitoClientMocked.on(ConfirmSignUpCommand).rejects(new NotAuthorizedException({
+                message: "",
+                $metadata: {}
+            }))
 
             await expect(userRepository.updateUserEmailToVerified(updateUserEmailToVerifiedInput)).rejects.toThrow(InvalidConfirmationCodeException)
         })
 
         test("should throw CognitoException", async () => {
-            cognitoClient.send = async function () {
-                throw new Error()
-            }
+            cognitoClientMocked.on(ConfirmSignUpCommand).rejects(new Error())
 
             await expect(userRepository.updateUserEmailToVerified(updateUserEmailToVerifiedInput)).rejects.toThrow(CognitoException)
         })
 
         test("should update a user email to verified", async () => {
-            cognitoClient.send = async function () {}
+            cognitoClientMocked.on(ConfirmSignUpCommand).resolves({})
 
             const output = await userRepository.updateUserEmailToVerified(updateUserEmailToVerifiedInput)
 
@@ -128,57 +119,45 @@ describe("UserRepositoryImpl", () => {
             "refresh-token"
         )
 
-        const adminInitiateAuthCommandOutput = {
-            AuthenticationResult: {
-                IdToken: authenticationTokenEntity.identityToken,
-                TokenType: authenticationTokenEntity.identityTokenType,
-                RefreshToken: authenticationTokenEntity.refreshToken
-            }
-        }
-
         test("should throw IncorrectEmailOrPasswordException", async () => {
-            cognitoClient.send = async function() {
-                throw new UserNotFoundException({
-                    message: "",
-                    $metadata: {}
-                })
-            }
+            cognitoClientMocked.on(AdminInitiateAuthCommand).rejects(new UserNotFoundException({
+                message: "",
+                $metadata: {}
+            }))
 
             await expect(userRepository.authenticateUser(authenticateUserInput)).rejects.toThrow(IncorrectEmailOrPasswordException)
 
-            cognitoClient.send = async function() {
-                throw new NotAuthorizedException({
-                    message: "",
-                    $metadata: {}
-                })
-            }
+            cognitoClientMocked.on(AdminInitiateAuthCommand).rejects(new NotAuthorizedException({
+                message: "",
+                $metadata: {}
+            }))
 
             await expect(userRepository.authenticateUser(authenticateUserInput)).rejects.toThrow(IncorrectEmailOrPasswordException)
         })
 
         test("should throw EmailNotConfirmedException", async () => {
-            cognitoClient.send = async function() {
-                throw new UserNotConfirmedException({
-                    message: "",
-                    $metadata: {}
-                })
-            }
+            cognitoClientMocked.on(AdminInitiateAuthCommand).rejects(new UserNotConfirmedException({
+                message: "",
+                $metadata: {}
+            }))
 
             await expect(userRepository.authenticateUser(authenticateUserInput)).rejects.toThrow(EmailNotConfirmedException)
         })
 
         test("should throw CognitoException", async () => {
-            cognitoClient.send = async function() {
-                throw new Error()
-            }
+            cognitoClientMocked.on(AdminInitiateAuthCommand).rejects(new Error())
 
             await expect(userRepository.authenticateUser(authenticateUserInput)).rejects.toThrow(CognitoException)
         })
 
         test("should authenticate a user", async () => {
-            cognitoClient.send = async function() {
-                return adminInitiateAuthCommandOutput
-            }
+            cognitoClientMocked.on(AdminInitiateAuthCommand).resolves({
+                AuthenticationResult: {
+                    IdToken: authenticationTokenEntity.identityToken,
+                    TokenType: authenticationTokenEntity.identityTokenType,
+                    RefreshToken: authenticationTokenEntity.refreshToken
+                }
+            })
 
             const output = await userRepository.authenticateUser(authenticateUserInput)
 

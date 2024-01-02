@@ -16,7 +16,6 @@ provider:
           Resource: ${self:custom.cognitoUserPoolArn}
         - Effect: Allow
           Action:
-            - "s3:PutObject"
             - "s3:GetObject"
           Resource: !Join
             - ""

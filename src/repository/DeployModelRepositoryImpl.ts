@@ -1,6 +1,12 @@
 import {PrismaClient} from "@prisma/client";
 import {CloudFormationClient, CreateStackCommand, DeleteStackCommand} from "@aws-sdk/client-cloudformation";
-import {PutObjectCommand, GetObjectCommand, S3Client} from "@aws-sdk/client-s3";
+import {
+    PutObjectCommand,
+    GetObjectCommand,
+    S3Client,
+    ListBucketsCommand,
+    CreateBucketCommand, GetObjectCommandOutput
+} from "@aws-sdk/client-s3";
 
 import {
     DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
@@ -16,6 +22,7 @@ import {SecretsManagerException} from "../exception/SecretsManagerException";
 import {CloudFormationException} from "../exception/CloudFormationException";
 import {getCloudFormationClientWithCredentials} from "../infra/cloudFormationClient";
 import {AwsCredentialsEntity} from "../entity/AwsCredentialsEntity";
+import {getS3ClientWithCredentials} from "../infra/s3Client";
 
 export class DeployModelRepositoryImpl implements DeployModelRepository {
 
@@ -23,6 +30,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         private readonly prismaClient: PrismaClient,
         private readonly s3Client: S3Client,
         private readonly secretsManagerClient: SecretsManagerClient,
+        private readonly getS3Client = getS3ClientWithCredentials,
         private readonly getCloudFormationClient = getCloudFormationClientWithCredentials
     ) {
     }
@@ -89,7 +97,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         const sourceCodePath = await this.uploadSourceCode(
             saveSourceCodeInput.ownerEmail,
             saveSourceCodeInput.deployModelId,
-            saveSourceCodeInput.bufferedSourceCodeFile
+            saveSourceCodeInput.bufferedSourceCodeFile,
+            saveSourceCodeInput.awsCredentialsPath
         )
 
         try {
@@ -120,20 +129,85 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    private async uploadSourceCode(ownerEmail: string, deployModelId: string, bufferedSourceCodeFile: Buffer): Promise<string> {
+    private async uploadSourceCode(ownerEmail: string, deployModelId: string, bufferedSourceCodeFile: Buffer, awsCredentialsPath: string): Promise<string> {
+        const awsCredentials = await this.findAwsCredentials(awsCredentialsPath)
+        const s3Client = this.getS3Client(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+
+        const bucketName = "source-code-s3-bucket"
+        const bucketExists = await this.sourceCodeStorageExists(bucketName, s3Client)
+        if (!bucketExists) {
+            await this.createSourceCodeStorage(bucketName, s3Client)
+        }
+
         try {
             Logger.info(this.constructor.name, this.saveSourceCode.name, "executing put object command")
-            const sourceCodePath = `sourceCode/${ownerEmail}-${deployModelId}-sourceCode.zip`
+            const sourceCodePath = `${ownerEmail}-${deployModelId}-sourceCode.zip`
             const putObjectCommand = new PutObjectCommand({
-                Bucket: String(process.env.S3_BUCKET_NAME),
+                Bucket: bucketName,
                 Key: sourceCodePath,
                 Body: bufferedSourceCodeFile
             })
-            await this.s3Client.send(putObjectCommand)
+            await s3Client.send(putObjectCommand)
             Logger.info(this.constructor.name, this.saveSourceCode.name, "put object command executed with success")
             return sourceCodePath
         } catch (error: any) {
             Logger.error(this.constructor.name, this.saveSourceCode.name, `S3 client throw ${error.message}`)
+            throw new S3Exception()
+        }
+    }
+
+    private async findAwsCredentials(awsCredentialsPath: string): Promise<AwsCredentialsEntity> {
+        try {
+            Logger.info(this.constructor.name, this.findAwsCredentials.name, "executing get secret value command")
+            const getSecretValueCommand = new GetSecretValueCommand({
+                SecretId: awsCredentialsPath
+            })
+            const output = await this.secretsManagerClient.send(getSecretValueCommand)
+
+            Logger.info(this.constructor.name, this.findAwsCredentials.name, "get secret value command executed with success")
+            const awsCredentials = JSON.parse(String(output?.SecretString))
+
+            return new AwsCredentialsEntity(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.findAwsCredentials.name, `Secrets Manager client throw ${error.message}`)
+            throw new SecretsManagerException()
+        }
+    }
+
+    private async sourceCodeStorageExists(bucketName: string, s3Client: S3Client): Promise<boolean> {
+        try {
+            Logger.info(this.constructor.name, this.sourceCodeStorageExists.name, "executing list buckets command")
+            const listBucketsCommand = new ListBucketsCommand({})
+            const output = await s3Client.send(listBucketsCommand)
+            if (!output.Buckets) {
+                throw new Error("Buckets undefined")
+            }
+
+            Logger.info(this.constructor.name, this.sourceCodeStorageExists.name, "list buckets command executed with success")
+
+            if (output.Buckets.find((obj) => obj.Name == bucketName)) {
+                return true
+            }
+
+            return false
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.sourceCodeStorageExists.name, `S3 client throw ${error.message}`)
+            throw new S3Client()
+        }
+    }
+
+    private async createSourceCodeStorage(bucketName: string, s3Client: S3Client): Promise<void> {
+        try {
+            Logger.info(this.constructor.name, this.createSourceCodeStorage.name, "executing create bucket command")
+            const createBucketCommand = new CreateBucketCommand({
+                Bucket: bucketName
+            })
+            await s3Client.send(createBucketCommand)
+            Logger.info(this.constructor.name, this.createSourceCodeStorage.name, "create bucket command executed with success")
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.createSourceCodeStorage.name, `S3 client throw ${error.message}`)
             throw new S3Exception()
         }
     }
@@ -144,7 +218,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             accessKeyId: saveAwsCredentialsInput.accessKeyId,
             secretAccessKey: saveAwsCredentialsInput.secretAccessKey
         })
-        await this.saveSecrets(awsCredentialsPath, awsCredentials)
+        await this.saveSecret(awsCredentialsPath, awsCredentials)
 
         try {
             Logger.info(this.constructor.name, this.saveAwsCredentials.name, `saving aws credentials path`)
@@ -175,17 +249,17 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    private async saveSecrets(name: string, secret: string) {
+    private async saveSecret(name: string, secret: string) {
         try {
-            Logger.info(this.constructor.name, this.saveSecrets.name, `executing create secret command`)
+            Logger.info(this.constructor.name, this.saveSecret.name, `executing create secret command`)
             const createSecretCommand = new CreateSecretCommand({
                 Name: name,
                 SecretString: secret,
             })
             await this.secretsManagerClient.send(createSecretCommand)
-            Logger.info(this.constructor.name, this.saveSecrets.name, `create secret command executed with success`)
+            Logger.info(this.constructor.name, this.saveSecret.name, `create secret command executed with success`)
         } catch (error: any) {
-            Logger.error(this.constructor.name, this.saveSecrets.name, `Secrets manager client throw ${error.message}`)
+            Logger.error(this.constructor.name, this.saveSecret.name, `Secrets manager client throw ${error.message}`)
             throw new SecretsManagerException()
         }
     }
@@ -212,24 +286,6 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    private async findAwsCredentials(awsCredentialsPath: string): Promise<AwsCredentialsEntity> {
-        try {
-            Logger.info(this.constructor.name, this.findAwsCredentials.name, "executing get secret value command")
-            const getSecretValueCommand = new GetSecretValueCommand({
-                SecretId: awsCredentialsPath
-            })
-            const output = await this.secretsManagerClient.send(getSecretValueCommand)
-
-            Logger.info(this.constructor.name, this.findAwsCredentials.name, "get secret value command executed with success")
-            const awsCredentials = JSON.parse(String(output?.SecretString))
-
-            return new AwsCredentialsEntity(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
-        } catch (error: any) {
-            Logger.error(this.constructor.name, this.findAwsCredentials.name, `Secrets Manager client throw ${error.message}`)
-            throw new SecretsManagerException()
-        }
-    }
-
     private async findTemplateUrl(): Promise<string> {
         try {
             Logger.info(this.constructor.name, this.findTemplateUrl.name, `executing get object command`)
@@ -238,7 +294,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                 Key: "ContainerModel.yaml"
             })
 
-            const output = await this.s3Client.send(getObjectCommand)
+            const output: GetObjectCommandOutput = await this.s3Client.send(getObjectCommand)
 
             Logger.info(this.constructor.name, this.findTemplateUrl.name, `get object command executed with success`)
             return String(await output.Body?.transformToString())
