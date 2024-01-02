@@ -12,7 +12,8 @@ import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
 import {cloudFormationClient} from "../../../src/infra/cloudFormationClient";
 import {CreateBucketCommand, GetObjectCommand, ListBucketsCommand, PutObjectCommand} from "@aws-sdk/client-s3";
 import {CreateSecretCommand, GetSecretValueCommand} from "@aws-sdk/client-secrets-manager";
-import {CreateStackCommand} from "@aws-sdk/client-cloudformation";
+import {CreateStackCommand, DescribeStacksCommand} from "@aws-sdk/client-cloudformation";
+import {DeployModelInfraEntity} from "../../../src/entity/DeployModelInfraEntity";
 
 describe("DeployModelRepositoryImpl", () => {
     const secretsManagerClientMocked = mockClient(secretsManagerClient)
@@ -185,6 +186,40 @@ describe("DeployModelRepositoryImpl", () => {
                 }
             })
             expect(getCloudFormationClientWithCredentialsMock).toBeCalledWith(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+        })
+    })
+
+    describe("findDeployModelInfraStatus", () => {
+        const cloudFormationStackName = `container-model-${deployModelId}`
+        const findDeployModelInfraStatusInput = {
+            cloudFormationStackName: cloudFormationStackName,
+            awsCredentialsPath: awsCredentialsPath
+        }
+
+        const stackId = randomUUID().toString()
+        const stackStatus = "CREATE_COMPLETE"
+
+        test("should return a deploy model entity", async () => {
+            secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
+            cloudFormationClientMocked.on(DescribeStacksCommand).resolves({
+                Stacks: [
+                    {
+                        StackId: stackId,
+                        StackName: cloudFormationStackName,
+                        StackStatus: stackStatus,
+                        CreationTime: new Date()
+                    }
+                ]
+            })
+
+            const output = await deployModelRepository.findDeployModelInfraStatus(findDeployModelInfraStatusInput)
+
+            expect(getCloudFormationClientWithCredentialsMock).toBeCalledWith(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+            expect(output).toEqual(new DeployModelInfraEntity(
+                stackId,
+                cloudFormationStackName,
+                stackStatus
+            ))
         })
     })
 })

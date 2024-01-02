@@ -1,5 +1,10 @@
 import {PrismaClient} from "@prisma/client";
-import {CloudFormationClient, CreateStackCommand, DeleteStackCommand} from "@aws-sdk/client-cloudformation";
+import {
+    CloudFormationClient,
+    CreateStackCommand,
+    DeleteStackCommand,
+    DescribeStacksCommand
+} from "@aws-sdk/client-cloudformation";
 import {
     PutObjectCommand,
     GetObjectCommand,
@@ -11,7 +16,7 @@ import {
 import {
     DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
     SaveSourceCodeInput,
-    SaveDeployModelInput, CreateDeployModelInfraInput,
+    SaveDeployModelInput, CreateDeployModelInfraInput, FindDeployModelInfraStatusInput,
 } from "./DeployModelRepository";
 import {Logger} from "../util/Logger";
 import {DeployModelEntity} from "../entity/DeployModelEntity";
@@ -23,6 +28,7 @@ import {CloudFormationException} from "../exception/CloudFormationException";
 import {getCloudFormationClientWithCredentials} from "../infra/cloudFormationClient";
 import {AwsCredentialsEntity} from "../entity/AwsCredentialsEntity";
 import {getS3ClientWithCredentials} from "../infra/s3Client";
+import {DeployModelInfraEntity} from "../entity/DeployModelInfraEntity";
 
 export class DeployModelRepositoryImpl implements DeployModelRepository {
 
@@ -346,6 +352,38 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `delete stack command executed with success`)
         } catch (error: any) {
             Logger.error(this.constructor.name, this.deleteDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
+            throw new CloudFormationException()
+        }
+    }
+
+    async findDeployModelInfraStatus(findDeployModelInfraStatusInput: FindDeployModelInfraStatusInput): Promise<DeployModelInfraEntity> {
+        const awsCredentials = await this.findAwsCredentials(findDeployModelInfraStatusInput.awsCredentialsPath)
+        const cloudFormationClient = this.getCloudFormationClient(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+
+        try {
+            Logger.info(this.constructor.name, this.findDeployModelInfraStatus.name, "executing describe stack command")
+            const describeStackCommand = new DescribeStacksCommand({
+                StackName: findDeployModelInfraStatusInput.cloudFormationStackName
+            })
+            const output = await cloudFormationClient.send(describeStackCommand)
+
+            if (!output.Stacks) {
+                throw new Error("Stacks undefined")
+            }
+
+            if (output.Stacks.length == 0) {
+                throw new Error("No stacks found")
+            }
+
+            Logger.info(this.constructor.name, this.findDeployModelInfraStatus.name, "describe stack command executed with success")
+            return new DeployModelInfraEntity(
+                String(output.Stacks[0].StackId),
+                String(output.Stacks[0].StackName),
+                String(output.Stacks[0].StackStatus)
+            )
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.findDeployModelInfraStatus.name, `CloudFormation client throw ${error.message}`)
             throw new CloudFormationException()
         }
     }

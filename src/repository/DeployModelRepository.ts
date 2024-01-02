@@ -1,4 +1,5 @@
 import {DeployModelEntity} from "../entity/DeployModelEntity";
+import {DeployModelInfraEntity} from "../entity/DeployModelInfraEntity";
 
 export interface DeployModelRepository {
     saveDeployModel(saveDeployModelInput: SaveDeployModelInput): Promise<DeployModelEntity>
@@ -6,6 +7,7 @@ export interface DeployModelRepository {
     saveSourceCode(saveSourceCodeInput: SaveSourceCodeInput): Promise<DeployModelEntity>
     saveAwsCredentials(saveAwsCredentialsInput: SaveAwsCredentialsInput): Promise<DeployModelEntity>
     createDeployModelInfra(createDeployModelInfraInput: CreateDeployModelInfraInput): Promise<void>
+    findDeployModelInfraStatus(findDeployModelInfraStatusInput: FindDeployModelInfraStatusInput): Promise<DeployModelInfraEntity>
 }
 
 export type SaveDeployModelInput = {
@@ -35,4 +37,9 @@ export type CreateDeployModelInfraInput = {
     deployModelId: string,
     awsCredentialsPath: string,
     ownerEmail: string,
+}
+
+export type FindDeployModelInfraStatusInput = {
+    cloudFormationStackName: string,
+    awsCredentialsPath: string
 }

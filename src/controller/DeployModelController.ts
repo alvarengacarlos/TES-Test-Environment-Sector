@@ -21,14 +21,20 @@ import {
     CreateDeployModelInfraUseCase
 } from "../use-case/CreateDeployModelInfraUseCase";
 import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
-import {InfrastructureAlreadyProvisioned} from "../exception/InfrastructureAlreadyProvisioned";
+import {InfrastructureAlreadyProvisionedException} from "../exception/InfrastructureAlreadyProvisionedException";
+import {
+    CheckDeployModelInfraStatusDtoInput,
+    CheckDeployModelInfraStatusDtoOutput, CheckDeployModelInfraStatusUseCase
+} from "../use-case/CheckDeployModelInfraStatusUseCase";
+import {InfrastructureNotProvisionedException} from "../exception/InfrastructureNotProvisionedException";
 
 export class DeployModelController {
     constructor(
         private createDeployModelUseCase: CreateDeployModelUseCase,
         private uploadSourceCodeUseCase: UploadSourceCodeUseCase,
         private saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase,
-        private createDeployModelInfraUseCase: CreateDeployModelInfraUseCase
+        private createDeployModelInfraUseCase: CreateDeployModelInfraUseCase,
+        private checkDeployModelInfraUseCase: CheckDeployModelInfraStatusUseCase
     ) {
     }
 
@@ -82,12 +88,29 @@ export class DeployModelController {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
             }
 
-            if (error instanceof InfrastructureAlreadyProvisioned) {
+            if (error instanceof InfrastructureAlreadyProvisionedException) {
                 return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_ALREADY_PROVISIONED, error.message, null)
             }
 
             if (error instanceof AwsCredentialsConfigurationMissingException) {
                 return HttpResponse.badRequest(ApiStatusCode.AWS_CREDENTIALS_CONFIGURATION_MISSING, error.message, null)
+            }
+
+            return HttpResponse.internalServerError()
+        }
+    }
+
+    async checkDeployModelInfraStatus(httpRequest: HttpRequest<CheckDeployModelInfraStatusDtoInput>): Promise<HttpResponse<CheckDeployModelInfraStatusDtoOutput | null>> {
+        try {
+            const checkDeployModelInfraStatus = await this.checkDeployModelInfraUseCase.execute(httpRequest.data)
+            return HttpResponse.ok("deploy model infra status got with success", checkDeployModelInfraStatus)
+        } catch (error: any) {
+            if (error instanceof DeployModelDoesNotExistException) {
+                return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            if (error instanceof InfrastructureNotProvisionedException) {
+                return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_NOT_PROVISIONED, error.message, null)
             }
 
             return HttpResponse.internalServerError()

@@ -30,18 +30,25 @@ import {
 import {
     AwsCredentialsConfigurationMissingException
 } from "../../../src/exception/AwsCredentialsConfigurationMissingException";
-import {InfrastructureAlreadyProvisioned} from "../../../src/exception/InfrastructureAlreadyProvisioned";
+import {InfrastructureAlreadyProvisionedException} from "../../../src/exception/InfrastructureAlreadyProvisionedException";
+import {
+    CheckDeployModelInfraStatusDtoInput, CheckDeployModelInfraStatusDtoOutput,
+    CheckDeployModelInfraStatusUseCase
+} from "../../../src/use-case/CheckDeployModelInfraStatusUseCase";
+import {InfrastructureNotProvisionedException} from "../../../src/exception/InfrastructureNotProvisionedException";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
     const uploadSourceCodeUseCase = mockDeep<UploadSourceCodeUseCase>()
     const saveAwsCredentialsUseCase = mockDeep<SaveAwsCredentialsUseCase>()
     const createDeployModelInfraUseCase = mockDeep<CreateDeployModelInfraUseCase>()
+    const checkDeployModelInfraStatusUseCase = mockDeep<CheckDeployModelInfraStatusUseCase>()
     const deployModelController = new DeployModelController(
         createDeployModelUseCase,
         uploadSourceCodeUseCase,
         saveAwsCredentialsUseCase,
-        createDeployModelInfraUseCase
+        createDeployModelInfraUseCase,
+        checkDeployModelInfraStatusUseCase
     )
     const ownerEmail = faker.internet.email()
 
@@ -182,7 +189,7 @@ describe("DeployModelController", () => {
         })
 
         test("should return bad request http response with INFRASTRUCTURE_ALREADY_PROVISIONED api status code", async () => {
-            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new InfrastructureAlreadyProvisioned())
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new InfrastructureAlreadyProvisionedException())
 
             const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
 
@@ -211,6 +218,49 @@ describe("DeployModelController", () => {
             const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
 
             expect(httpResponse).toEqual(HttpResponse.ok("deploy model infra created with success", createDeployModelInfraDtoOutput))
+        })
+    })
+
+    describe("checkDeployModelInfraStatus", () => {
+        const checkDeployModelInfraStatusDtoInput = new CheckDeployModelInfraStatusDtoInput(
+            randomUUID().toString(),
+        )
+        const httpRequest = new HttpRequest<CreateDeployModelInfraDtoInput>(checkDeployModelInfraStatusDtoInput)
+
+        const checkDeployModelInfraStatusDtoOutput = new CheckDeployModelInfraStatusDtoOutput(
+            "CREATE_SUCCESS",
+        )
+
+        test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
+            jest.spyOn(checkDeployModelInfraStatusUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.checkDeployModelInfraStatus(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with INFRASTRUCTURE_NOT_PROVISIONED api status code", async () => {
+            jest.spyOn(checkDeployModelInfraStatusUseCase, "execute").mockRejectedValue(new InfrastructureNotProvisionedException())
+
+            const httpResponse = await deployModelController.checkDeployModelInfraStatus(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_NOT_PROVISIONED, "Infrastructure not provisioned", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(checkDeployModelInfraStatusUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.checkDeployModelInfraStatus(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(checkDeployModelInfraStatusUseCase, "execute").mockResolvedValue(checkDeployModelInfraStatusDtoOutput)
+
+            const httpResponse = await deployModelController.checkDeployModelInfraStatus(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.ok("deploy model infra status got with success", checkDeployModelInfraStatusDtoOutput))
         })
     })
 })
