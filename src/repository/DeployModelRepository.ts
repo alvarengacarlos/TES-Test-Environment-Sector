@@ -8,6 +8,7 @@ export interface DeployModelRepository {
     saveAwsCredentials(saveAwsCredentialsInput: SaveAwsCredentialsInput): Promise<DeployModelEntity>
     createDeployModelInfra(createDeployModelInfraInput: CreateDeployModelInfraInput): Promise<void>
     findDeployModelInfraStatus(findDeployModelInfraStatusInput: FindDeployModelInfraStatusInput): Promise<DeployModelInfraEntity>
+    deleteDeployModelInfra(deleteDeployModelInfraInput: DeleteDeployModelInfraInput): Promise<DeployModelEntity>
 }
 
 export type SaveDeployModelInput = {
@@ -41,5 +42,10 @@ export type CreateDeployModelInfraInput = {
 
 export type FindDeployModelInfraStatusInput = {
     cloudFormationStackName: string,
+    awsCredentialsPath: string
+}
+
+export type DeleteDeployModelInfraInput = {
+    deployModelId: string,
     awsCredentialsPath: string
 }

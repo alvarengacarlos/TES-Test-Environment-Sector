@@ -23,6 +23,7 @@ import {
     CheckDeployModelInfraStatusDtoInput,
     CheckDeployModelInfraStatusUseCase
 } from "../use-case/CheckDeployModelInfraStatusUseCase";
+import {DeleteDeployModelInfraDtoInput, DeleteDeployModelInfraUseCase} from "../use-case/DeleteDeployModelInfraUseCase";
 
 const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
 const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
@@ -30,12 +31,14 @@ const uploadSourceCodeUseCase = new UploadSourceCodeUseCase(deployModelRepositor
 const saveAwsCredentialsUseCase = new SaveAwsCredentialsUseCase(deployModelRepository)
 const deployModelInfraUseCase = new CreateDeployModelInfraUseCase(deployModelRepository)
 const checkDeployModelInfraStatusUseCase = new CheckDeployModelInfraStatusUseCase(deployModelRepository)
+const deleteDeployModelInfraUseCase = new DeleteDeployModelInfraUseCase(deployModelRepository)
 const deployModelController = new DeployModelController(
     createDeployModelUseCase,
     uploadSourceCodeUseCase,
     saveAwsCredentialsUseCase,
     deployModelInfraUseCase,
-    checkDeployModelInfraStatusUseCase
+    checkDeployModelInfraStatusUseCase,
+    deleteDeployModelInfraUseCase
 )
 const deployModelValidator = new DeployModelValidator()
 
@@ -104,6 +107,19 @@ deployModelRouter.get("/infra/deploy-model/:deployModelId", deployModelValidator
             deployModelId: request.params.deployModelId,
         })
         const httpResponse = await deployModelController.checkDeployModelInfraStatus(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+deployModelRouter.delete("/infra/deploy-model/:deployModelId", deployModelValidator.deleteDeployModelInfraValidator, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<DeleteDeployModelInfraDtoInput>({
+            deployModelId: request.params.deployModelId,
+        })
+        const httpResponse = await deployModelController.deleteDeployModelInfra(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
 
     } catch (error: any) {
