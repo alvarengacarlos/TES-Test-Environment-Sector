@@ -45,6 +45,8 @@ describe("DeployModelRepositoryImpl", () => {
         secretAccessKey: "0000000000000000000000000000000000000000"
     }
 
+    const sourceCodePath = `${ownerEmail}-${deployModelId}-sourceCode.zip`
+
     describe("saveDeployModel", () => {
         const saveDeployModelInput = {
             deployModelName: faker.internet.domainName(),
@@ -80,7 +82,7 @@ describe("DeployModelRepositoryImpl", () => {
 
     describe("saveSourceCode", () => {
         const saveSourceCodeInput = {
-            ownerEmail: faker.internet.email(),
+            ownerEmail: ownerEmail,
             deployModelId: deployModelId,
             bufferedSourceCodeFile: Buffer.from(""),
             awsCredentialsPath: awsCredentialsPath
@@ -98,7 +100,7 @@ describe("DeployModelRepositoryImpl", () => {
             expect(prismaClient.deployModel.update).toBeCalledWith({
                 where: {id: saveSourceCodeInput.deployModelId},
                 data: {
-                    sourceCodePath: `${saveSourceCodeInput.ownerEmail}-${saveSourceCodeInput.deployModelId}-sourceCode.zip`
+                    sourceCodePath: sourceCodePath
                 }
             })
             expect(output).toEqual(deployModelEntity)
@@ -149,7 +151,8 @@ describe("DeployModelRepositoryImpl", () => {
     describe("createDeployModelInfra", () => {
         const createDeployModelInfraInput = {
             deployModelId: deployModelId,
-            awsCredentialsPath: awsCredentialsPath
+            awsCredentialsPath: awsCredentialsPath,
+            ownerEmail: ownerEmail
         }
 
         test("should create a deploy model infra", async () => {

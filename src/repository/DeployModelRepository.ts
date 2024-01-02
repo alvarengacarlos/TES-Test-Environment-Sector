@@ -32,6 +32,7 @@ export type SaveAwsCredentialsInput = {
 }
 
 export type CreateDeployModelInfraInput = {
-    deployModelId: string
-    awsCredentialsPath: string
+    deployModelId: string,
+    awsCredentialsPath: string,
+    ownerEmail: string,
 }

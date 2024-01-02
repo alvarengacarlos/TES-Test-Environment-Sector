@@ -59,11 +59,17 @@ describe("CreateDeployModelInfraUseCase", () => {
 
         test("should create a deploy model infra", async () => {
             jest.spyOn(deployModelRepository, "findDeployModelById").mockResolvedValue(deployModelEntity)
+            jest.spyOn(deployModelRepository, "createDeployModelInfra").mockResolvedValue()
 
             const output = await createDeployModelInfraUseCase.execute(createDeployModelInfraDtoInput)
 
             expect(deployModelRepository.findDeployModelById).toBeCalledWith({
                 deployModelId: deployModelId
+            })
+            expect(deployModelRepository.createDeployModelInfra).toBeCalledWith({
+                deployModelId: deployModelEntity.id,
+                awsCredentialsPath: deployModelEntity.awsCredentialsPath,
+                ownerEmail: deployModelEntity.ownerEmail
             })
             expect(output).toEqual(createDeployModelInfraDtoOutput)
         })

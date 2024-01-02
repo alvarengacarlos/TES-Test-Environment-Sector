@@ -141,7 +141,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
 
         try {
             Logger.info(this.constructor.name, this.saveSourceCode.name, "executing put object command")
-            const sourceCodePath = `${ownerEmail}-${deployModelId}-sourceCode.zip`
+            const sourceCodePath = this.generateSourceCodePath(ownerEmail, deployModelId)
             const putObjectCommand = new PutObjectCommand({
                 Bucket: bucketName,
                 Key: sourceCodePath,
@@ -154,6 +154,10 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             Logger.error(this.constructor.name, this.saveSourceCode.name, `S3 client throw ${error.message}`)
             throw new S3Exception()
         }
+    }
+
+    private generateSourceCodePath(ownerEmail: string, deployModelId: string): string {
+        return `${ownerEmail}-${deployModelId}-sourceCode.zip`
     }
 
     private async findAwsCredentials(awsCredentialsPath: string): Promise<AwsCredentialsEntity> {
@@ -274,7 +278,14 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             Logger.info(this.constructor.name, this.createDeployModelInfra.name, `executing create stack command`)
             const createStackCommand = new CreateStackCommand({
                 StackName: stackName,
-                TemplateBody: templateBody
+                TemplateBody: templateBody,
+                Parameters: [
+                    {
+                        ParameterKey: "SourceCodePath",
+                        ParameterValue: this.generateSourceCodePath(createDeployModelInfraInput.ownerEmail, createDeployModelInfraInput.deployModelId)
+                    }
+                ],
+                Capabilities: ["CAPABILITY_IAM"]
             })
 
             await cloudFormationClient.send(createStackCommand)
