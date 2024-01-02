@@ -3,6 +3,10 @@ AWSTemplateFormatVersion: "2010-09-09"
 
 Description: "This template create a container model"
 
+Parameters:
+  SourceCodePath:
+    Type: String
+
 Resources:
   Vpc:
     Type: AWS::EC2::VPC
@@ -171,6 +175,7 @@ Resources:
     Type: AWS::EC2::Instance
     Properties:
       AvailabilityZone: "us-east-1a"
+      IamInstanceProfile: !Ref InstanceProfile
       ImageId: "ami-0c7217cdde317cfec"
       InstanceType: "t2.micro"
       SecurityGroupIds:
@@ -181,6 +186,12 @@ Resources:
           !Sub |
             #!/bin/bash            
             sudo apt update -y
+          
+            sudo apt install -y zip
+            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+            unzip awscliv2.zip
+            sudo ./aws/install          
+          
             sudo apt install -y ca-certificates curl gnupg
             sudo install -m 0755 -d /etc/apt/keyrings
             curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
@@ -191,6 +202,30 @@ Resources:
           
             sudo apt update -y
             sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref AccessSourceCodeRole
+  AccessSourceCodeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Action:
+                - "sts:AssumeRole"
+              Principal:
+                Service: "ec2.amazonaws.com"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "s3:GetObject"
+                Resource: !Sub "arn:aws:s3:::source-code-s3-bucket/${SourceCodePath}"
+          PolicyName: !Sub "allow-access-to-${SourceCodePath}-s3-object"
   ElasticIP:
     Type: AWS::EC2::EIP
     Properties:

@@ -23,7 +23,8 @@ export class CreateDeployModelInfraUseCase {
 
         await this.deployModelRepository.createDeployModelInfra({
             deployModelId: createDeployModelInfraDtoInput.deployModelId,
-            awsCredentialsPath: deployModel.awsCredentialsPath
+            awsCredentialsPath: deployModel.awsCredentialsPath,
+            ownerEmail: deployModel.ownerEmail
         })
 
         return new CreateDeployModelInfraDtoOutput(createDeployModelInfraDtoInput.deployModelId)
