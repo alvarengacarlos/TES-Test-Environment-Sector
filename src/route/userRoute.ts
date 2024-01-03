@@ -1,20 +1,15 @@
 import express, {NextFunction, Request, Response} from "express"
 
 import {HttpRequest} from "../util/HttpRequest";
-import {SignUpDtoInput, SignUpUseCase} from "../use-case/SignUpUseCase";
 import {UserRepositoryImpl} from "../repository/UserRepositoryImpl";
 import {UserController} from "../controller/UserController";
 import {UserValidator} from "../middleware/UserValidator";
-import {ConfirmSignUpDtoInput, ConfirmSignUpUseCase} from "../use-case/ConfirmSignUpUseCase";
-import {SignInUseCase} from "../use-case/SignInUseCase";
 import {cognitoClient} from "../infra/cognitoClient";
+import {ConfirmSignUpDtoInput, SignInDtoInput, SignUpDtoInput, UserService} from "../service/UserService";
 
 const userRepository = new UserRepositoryImpl(cognitoClient)
-const signUpUseCase = new SignUpUseCase(userRepository)
-const confirmSignUpUseCase = new ConfirmSignUpUseCase(userRepository)
-const signInUseCase = new SignInUseCase(userRepository)
-
-const userController = new UserController(signUpUseCase, confirmSignUpUseCase, signInUseCase)
+const userService = new UserService(userRepository)
+const userController = new UserController(userService)
 const userValidator = new UserValidator()
 
 export const userRouter = express.Router()
@@ -50,7 +45,7 @@ userRouter.post("/confirm-sign-up", userValidator.confirmSignUpValidator, async 
 
 userRouter.post("/sign-in", userValidator.signInValidator, async (request: Request, response: Response, next: NextFunction) => {
     try {
-        const httpRequest = new HttpRequest<SignUpDtoInput>({
+        const httpRequest = new HttpRequest<SignInDtoInput>({
             email: request.body.email,
             password: request.body.password
         })
