@@ -27,14 +27,19 @@ import {
     CheckDeployModelInfraStatusDtoOutput, CheckDeployModelInfraStatusUseCase
 } from "../use-case/CheckDeployModelInfraStatusUseCase";
 import {InfrastructureNotProvisionedException} from "../exception/InfrastructureNotProvisionedException";
+import {
+    DeleteDeployModelInfraDtoInput,
+    DeleteDeployModelInfraDtoOutput, DeleteDeployModelInfraUseCase
+} from "../use-case/DeleteDeployModelInfraUseCase";
 
 export class DeployModelController {
     constructor(
-        private createDeployModelUseCase: CreateDeployModelUseCase,
-        private uploadSourceCodeUseCase: UploadSourceCodeUseCase,
-        private saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase,
-        private createDeployModelInfraUseCase: CreateDeployModelInfraUseCase,
-        private checkDeployModelInfraUseCase: CheckDeployModelInfraStatusUseCase
+        private readonly createDeployModelUseCase: CreateDeployModelUseCase,
+        private readonly uploadSourceCodeUseCase: UploadSourceCodeUseCase,
+        private readonly saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase,
+        private readonly createDeployModelInfraUseCase: CreateDeployModelInfraUseCase,
+        private readonly checkDeployModelInfraUseCase: CheckDeployModelInfraStatusUseCase,
+        private readonly deleteDeployModelInfraUseCase: DeleteDeployModelInfraUseCase
     ) {
     }
 
@@ -104,6 +109,24 @@ export class DeployModelController {
         try {
             const checkDeployModelInfraStatus = await this.checkDeployModelInfraUseCase.execute(httpRequest.data)
             return HttpResponse.ok("deploy model infra status got with success", checkDeployModelInfraStatus)
+        } catch (error: any) {
+            if (error instanceof DeployModelDoesNotExistException) {
+                return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            if (error instanceof InfrastructureNotProvisionedException) {
+                return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_NOT_PROVISIONED, error.message, null)
+            }
+
+            return HttpResponse.internalServerError()
+        }
+    }
+
+    async deleteDeployModelInfra(httpRequest: HttpRequest<DeleteDeployModelInfraDtoInput>): Promise<HttpResponse<DeleteDeployModelInfraDtoOutput | null>> {
+        try {
+            const deleteDeployModelInfraDtoOutput = await this.deleteDeployModelInfraUseCase.execute(httpRequest.data)
+            return HttpResponse.ok("deploy model infra deleted with success", deleteDeployModelInfraDtoOutput)
+
         } catch (error: any) {
             if (error instanceof DeployModelDoesNotExistException) {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)

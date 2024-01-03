@@ -36,6 +36,10 @@ import {
     CheckDeployModelInfraStatusUseCase
 } from "../../../src/use-case/CheckDeployModelInfraStatusUseCase";
 import {InfrastructureNotProvisionedException} from "../../../src/exception/InfrastructureNotProvisionedException";
+import {
+    DeleteDeployModelInfraDtoInput, DeleteDeployModelInfraDtoOutput,
+    DeleteDeployModelInfraUseCase
+} from "../../../src/use-case/DeleteDeployModelInfraUseCase";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
@@ -43,12 +47,14 @@ describe("DeployModelController", () => {
     const saveAwsCredentialsUseCase = mockDeep<SaveAwsCredentialsUseCase>()
     const createDeployModelInfraUseCase = mockDeep<CreateDeployModelInfraUseCase>()
     const checkDeployModelInfraStatusUseCase = mockDeep<CheckDeployModelInfraStatusUseCase>()
+    const deleteDeployModelInfraUseCase = mockDeep<DeleteDeployModelInfraUseCase>()
     const deployModelController = new DeployModelController(
         createDeployModelUseCase,
         uploadSourceCodeUseCase,
         saveAwsCredentialsUseCase,
         createDeployModelInfraUseCase,
-        checkDeployModelInfraStatusUseCase
+        checkDeployModelInfraStatusUseCase,
+        deleteDeployModelInfraUseCase
     )
     const ownerEmail = faker.internet.email()
 
@@ -225,7 +231,7 @@ describe("DeployModelController", () => {
         const checkDeployModelInfraStatusDtoInput = new CheckDeployModelInfraStatusDtoInput(
             randomUUID().toString(),
         )
-        const httpRequest = new HttpRequest<CreateDeployModelInfraDtoInput>(checkDeployModelInfraStatusDtoInput)
+        const httpRequest = new HttpRequest<CheckDeployModelInfraStatusDtoInput>(checkDeployModelInfraStatusDtoInput)
 
         const checkDeployModelInfraStatusDtoOutput = new CheckDeployModelInfraStatusDtoOutput(
             "CREATE_SUCCESS",
@@ -261,6 +267,50 @@ describe("DeployModelController", () => {
             const httpResponse = await deployModelController.checkDeployModelInfraStatus(httpRequest)
 
             expect(httpResponse).toEqual(HttpResponse.ok("deploy model infra status got with success", checkDeployModelInfraStatusDtoOutput))
+        })
+    })
+
+    describe("deleteDeployModelInfra", () => {
+        const deployModelId = randomUUID().toString()
+        const deleteDeployModelInfraDtoInput = new DeleteDeployModelInfraDtoInput(
+            deployModelId,
+        )
+        const httpRequest = new HttpRequest<DeleteDeployModelInfraDtoInput>(deleteDeployModelInfraDtoInput)
+
+        const deleteDeployModelInfraDtoOutput = new DeleteDeployModelInfraDtoOutput(
+            deployModelId
+        )
+
+        test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
+            jest.spyOn(deleteDeployModelInfraUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.deleteDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with INFRASTRUCTURE_NOT_PROVISIONED api status code", async () => {
+            jest.spyOn(deleteDeployModelInfraUseCase, "execute").mockRejectedValue(new InfrastructureNotProvisionedException())
+
+            const httpResponse = await deployModelController.deleteDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_NOT_PROVISIONED, "Infrastructure not provisioned", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(deleteDeployModelInfraUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.deleteDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(deleteDeployModelInfraUseCase, "execute").mockResolvedValue(deleteDeployModelInfraDtoOutput)
+
+            const httpResponse = await deployModelController.deleteDeployModelInfra(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.ok("deploy model infra deleted with success", deleteDeployModelInfraDtoOutput))
         })
     })
 })

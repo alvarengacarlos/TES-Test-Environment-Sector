@@ -12,7 +12,7 @@ import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
 import {cloudFormationClient} from "../../../src/infra/cloudFormationClient";
 import {CreateBucketCommand, GetObjectCommand, ListBucketsCommand, PutObjectCommand} from "@aws-sdk/client-s3";
 import {CreateSecretCommand, GetSecretValueCommand} from "@aws-sdk/client-secrets-manager";
-import {CreateStackCommand, DescribeStacksCommand} from "@aws-sdk/client-cloudformation";
+import {CreateStackCommand, DeleteStackCommand, DescribeStacksCommand} from "@aws-sdk/client-cloudformation";
 import {DeployModelInfraEntity} from "../../../src/entity/DeployModelInfraEntity";
 
 describe("DeployModelRepositoryImpl", () => {
@@ -220,6 +220,27 @@ describe("DeployModelRepositoryImpl", () => {
                 cloudFormationStackName,
                 stackStatus
             ))
+        })
+    })
+
+    describe("deleteDeployModelInfra", () => {
+        const deleteDeployModelInfraInput = {
+            deployModelId: deployModelId,
+            awsCredentialsPath: awsCredentialsPath
+        }
+
+        test("should delete deploy model infra", async () => {
+            secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
+            cloudFormationClientMocked.on(DeleteStackCommand).resolves({})
+            jest.spyOn(prismaClient.deployModel, "update").mockResolvedValue(deployModelEntity)
+
+            const output = await deployModelRepository.deleteDeployModelInfra(deleteDeployModelInfraInput)
+
+            expect(prismaClient.deployModel.update).toBeCalledWith({
+                where: {id: deployModelId},
+                data: {cloudFormationStackName: ""}
+            })
+            expect(output).toEqual(deployModelEntity)
         })
     })
 })

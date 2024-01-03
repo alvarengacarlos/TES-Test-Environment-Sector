@@ -16,7 +16,7 @@ import {
 import {
     DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
     SaveSourceCodeInput,
-    SaveDeployModelInput, CreateDeployModelInfraInput, FindDeployModelInfraStatusInput,
+    SaveDeployModelInput, CreateDeployModelInfraInput, FindDeployModelInfraStatusInput, DeleteDeployModelInfraInput,
 } from "./DeployModelRepository";
 import {Logger} from "../util/Logger";
 import {DeployModelEntity} from "../entity/DeployModelEntity";
@@ -282,12 +282,12 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         const awsCredentials = await this.findAwsCredentials(createDeployModelInfraInput.awsCredentialsPath)
         const cloudFormationClient = this.getCloudFormationClient(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
         const templateBody = await this.findTemplateUrl()
-        const stackName = `container-model-${createDeployModelInfraInput.deployModelId}`
+        const cloudFormationStackName = this.generateCloudFormationStackName(createDeployModelInfraInput.deployModelId)
 
         try {
             Logger.info(this.constructor.name, this.createDeployModelInfra.name, `executing create stack command`)
             const createStackCommand = new CreateStackCommand({
-                StackName: stackName,
+                StackName: cloudFormationStackName,
                 TemplateBody: templateBody,
                 Parameters: [
                     {
@@ -295,14 +295,14 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                         ParameterValue: this.generateSourceCodePath(createDeployModelInfraInput.ownerEmail, createDeployModelInfraInput.deployModelId)
                     }
                 ],
-                Capabilities: ["CAPABILITY_IAM"]
+                Capabilities: ["CAPABILITY_IAM"],
+                OnFailure: "DELETE"
             })
 
             await cloudFormationClient.send(createStackCommand)
             Logger.info(this.constructor.name, this.createDeployModelInfra.name, `create stack command executed with success`)
         } catch (error: any) {
             Logger.error(this.constructor.name, this.createDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
-            await this.deleteDeployModelInfra(stackName, cloudFormationClient)
             throw new CloudFormationException()
         }
 
@@ -311,7 +311,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             await this.prismaClient.deployModel.update({
                 where: {id: createDeployModelInfraInput.deployModelId},
                 data: {
-                    cloudFormationStackName: stackName
+                    cloudFormationStackName: cloudFormationStackName
                 }
             })
 
@@ -341,19 +341,8 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    private async deleteDeployModelInfra(stackName: string, cloudFormationClient: CloudFormationClient) {
-        try {
-            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `executing delete stack command`)
-            const deleteStackCommand = new DeleteStackCommand({
-                StackName: stackName,
-            })
-
-            await cloudFormationClient.send(deleteStackCommand)
-            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `delete stack command executed with success`)
-        } catch (error: any) {
-            Logger.error(this.constructor.name, this.deleteDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
-            throw new CloudFormationException()
-        }
+    private generateCloudFormationStackName(deployModelId: string): string {
+        return `container-model-${deployModelId}`
     }
 
     async findDeployModelInfraStatus(findDeployModelInfraStatusInput: FindDeployModelInfraStatusInput): Promise<DeployModelInfraEntity> {
@@ -385,6 +374,49 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         } catch (error: any) {
             Logger.error(this.constructor.name, this.findDeployModelInfraStatus.name, `CloudFormation client throw ${error.message}`)
             throw new CloudFormationException()
+        }
+    }
+
+    async deleteDeployModelInfra(deleteDeployModelInfraInput: DeleteDeployModelInfraInput): Promise<DeployModelEntity> {
+        const awsCredentials = await this.findAwsCredentials(deleteDeployModelInfraInput.awsCredentialsPath)
+        const cloudFormationClient = this.getCloudFormationClient(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+        const cloudFormationStackName = this.generateCloudFormationStackName(deleteDeployModelInfraInput.deployModelId)
+
+        try {
+            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `executing delete stack command`)
+            const deleteStackCommand = new DeleteStackCommand({
+                StackName: cloudFormationStackName,
+            })
+
+            await cloudFormationClient.send(deleteStackCommand)
+            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, `delete stack command executed with success`)
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.deleteDeployModelInfra.name, `CloudFormation client throw ${error.message}`)
+            throw new CloudFormationException()
+        }
+
+        try {
+            await this.prismaClient.$connect()
+            const result = await this.prismaClient.deployModel.update({
+                where: {id: deleteDeployModelInfraInput.deployModelId},
+                data: {
+                    cloudFormationStackName: ""
+                }
+            })
+            return new DeployModelEntity(
+                result.id,
+                result.deployModelName,
+                result.ownerEmail,
+                result.sourceCodePath,
+                result.awsCredentialsPath,
+                result.cloudFormationStackName
+            )
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.deleteDeployModelInfra.name, `Prisma client throw ${error.message}`)
+            throw new DatabaseException()
+        } finally {
+            await this.prismaClient.$disconnect()
         }
     }
 }
