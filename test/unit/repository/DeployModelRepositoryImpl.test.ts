@@ -10,8 +10,14 @@ import {DeployModelEntity} from "../../../src/entity/DeployModelEntity";
 import {s3Client} from "../../../src/infra/s3Client";
 import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
 import {cloudFormationClient} from "../../../src/infra/cloudFormationClient";
-import {CreateBucketCommand, GetObjectCommand, ListBucketsCommand, PutObjectCommand} from "@aws-sdk/client-s3";
-import {CreateSecretCommand, GetSecretValueCommand} from "@aws-sdk/client-secrets-manager";
+import {
+    CreateBucketCommand,
+    DeleteObjectCommand,
+    GetObjectCommand,
+    ListBucketsCommand,
+    PutObjectCommand
+} from "@aws-sdk/client-s3";
+import {CreateSecretCommand, DeleteSecretCommand, GetSecretValueCommand} from "@aws-sdk/client-secrets-manager";
 import {CreateStackCommand, DeleteStackCommand, DescribeStacksCommand} from "@aws-sdk/client-cloudformation";
 import {DeployModelInfraEntity} from "../../../src/entity/DeployModelInfraEntity";
 
@@ -61,6 +67,28 @@ describe("DeployModelRepositoryImpl", () => {
             const output = await deployModelRepository.saveDeployModel(saveDeployModelInput)
 
             expect(prismaClient.deployModel.create).toBeCalledWith({data: saveDeployModelInput})
+            expect(output).toEqual(deployModelEntity)
+        })
+    })
+
+    describe("deleteDeployModelById", () => {
+        const deleteDeployModelByIdInput = {
+            deployModelId: deployModelId,
+            awsCredentialsPath: awsCredentialsPath,
+            sourceCodePath: sourceCodePath
+        }
+
+        test("should delete deploy model", async () => {
+            secretsManagerClientMocked.on(GetSecretValueCommand).resolves({SecretString: JSON.stringify(awsCredentials)})
+            s3ClientMocked.on(DeleteObjectCommand).resolves({})
+            secretsManagerClientMocked.on(DeleteSecretCommand).resolves({})
+            jest.spyOn(prismaClient.deployModel, "delete").mockResolvedValue(deployModelEntity)
+
+            const output = await deployModelRepository.deleteDeployModelById(deleteDeployModelByIdInput)
+
+            expect(prismaClient.deployModel.delete).toBeCalledWith({
+                where: {id: deployModelId}
+            })
             expect(output).toEqual(deployModelEntity)
         })
     })

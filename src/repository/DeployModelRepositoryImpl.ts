@@ -1,6 +1,5 @@
 import {PrismaClient} from "@prisma/client";
 import {
-    CloudFormationClient,
     CreateStackCommand,
     DeleteStackCommand,
     DescribeStacksCommand
@@ -10,19 +9,30 @@ import {
     GetObjectCommand,
     S3Client,
     ListBucketsCommand,
-    CreateBucketCommand, GetObjectCommandOutput
+    CreateBucketCommand, GetObjectCommandOutput, DeleteObjectCommand
 } from "@aws-sdk/client-s3";
 
 import {
-    DeployModelRepository, FindDeployModelByIdInput, SaveAwsCredentialsInput,
+    DeployModelRepository,
+    FindDeployModelByIdInput,
+    SaveAwsCredentialsInput,
     SaveSourceCodeInput,
-    SaveDeployModelInput, CreateDeployModelInfraInput, FindDeployModelInfraStatusInput, DeleteDeployModelInfraInput,
+    SaveDeployModelInput,
+    CreateDeployModelInfraInput,
+    FindDeployModelInfraStatusInput,
+    DeleteDeployModelInfraInput,
+    DeleteDeployModelByIdInput,
 } from "./DeployModelRepository";
 import {Logger} from "../util/Logger";
 import {DeployModelEntity} from "../entity/DeployModelEntity";
 import {DatabaseException} from "../exception/DatabaseException";
 import {S3Exception} from "../exception/S3Exception";
-import {CreateSecretCommand, GetSecretValueCommand, SecretsManagerClient} from "@aws-sdk/client-secrets-manager";
+import {
+    CreateSecretCommand,
+    DeleteSecretCommand,
+    GetSecretValueCommand,
+    SecretsManagerClient
+} from "@aws-sdk/client-secrets-manager";
 import {SecretsManagerException} from "../exception/SecretsManagerException";
 import {CloudFormationException} from "../exception/CloudFormationException";
 import {getCloudFormationClientWithCredentials} from "../infra/cloudFormationClient";
@@ -67,6 +77,62 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         } finally {
             await this.prismaClient.$disconnect()
         }
+    }
+
+    async deleteDeployModelById(deleteDeployModelByIdInput: DeleteDeployModelByIdInput): Promise<DeployModelEntity> {
+        const awsCredentials = await this.findAwsCredentials(deleteDeployModelByIdInput.awsCredentialsPath)
+        const s3Client = this.getS3Client(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
+
+        try {
+            const deleteObjectCommand = new DeleteObjectCommand({
+                Bucket: this.getBucketName(),
+                Key: deleteDeployModelByIdInput.sourceCodePath
+            })
+            await s3Client.send(deleteObjectCommand)
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.deleteDeployModelById.name, `S3 client throw ${error.message}`)
+            throw new S3Exception()
+        }
+
+        try {
+            const deleteSecretCommand = new DeleteSecretCommand({
+                SecretId: deleteDeployModelByIdInput.awsCredentialsPath,
+                ForceDeleteWithoutRecovery: true
+            })
+            await this.secretsManagerClient.send(deleteSecretCommand)
+
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.deleteDeployModelById.name, `Secrets Manager client throw ${error.message}`)
+            throw new SecretsManagerException()
+        }
+
+        try {
+            Logger.info(this.constructor.name, this.deleteDeployModelById.name, "deleting deploy model")
+            await this.prismaClient.$connect()
+            const result = await this.prismaClient.deployModel.delete({
+                where: {id: deleteDeployModelByIdInput.deployModelId}
+            })
+
+            Logger.info(this.constructor.name, this.deleteDeployModelById.name, "deploy model deleted with success")
+            return new DeployModelEntity(
+                result.id,
+                result.deployModelName,
+                result.ownerEmail,
+                result.sourceCodePath,
+                result.awsCredentialsPath,
+                result.cloudFormationStackName
+            )
+        } catch (error: any) {
+            Logger.error(this.constructor.name, this.deleteDeployModelById.name, `Prisma client throw ${error.message}`)
+            throw new DatabaseException()
+        } finally {
+            await this.prismaClient.$disconnect()
+        }
+    }
+
+    private getBucketName() {
+        return "source-code-s3-bucket"
     }
 
     async findDeployModelById(findDeployModelByIdInput: FindDeployModelByIdInput): Promise<DeployModelEntity | null> {
@@ -142,7 +208,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         const awsCredentials = await this.findAwsCredentials(awsCredentialsPath)
         const s3Client = this.getS3Client(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
 
-        const bucketName = "source-code-s3-bucket"
+        const bucketName = this.getBucketName()
         const bucketExists = await this.sourceCodeStorageExists(bucketName, s3Client)
         if (!bucketExists) {
             await this.createSourceCodeStorage(bucketName, s3Client)
@@ -165,10 +231,6 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
     }
 
-    private generateSourceCodePath(ownerEmail: string, deployModelId: string): string {
-        return `${ownerEmail}-${deployModelId}-sourceCode.zip`
-    }
-
     private async findAwsCredentials(awsCredentialsPath: string): Promise<AwsCredentialsEntity> {
         try {
             Logger.info(this.constructor.name, this.findAwsCredentials.name, "executing get secret value command")
@@ -185,6 +247,10 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
             Logger.error(this.constructor.name, this.findAwsCredentials.name, `Secrets Manager client throw ${error.message}`)
             throw new SecretsManagerException()
         }
+    }
+
+    private generateSourceCodePath(ownerEmail: string, deployModelId: string): string {
+        return `${ownerEmail}-${deployModelId}-sourceCode.zip`
     }
 
     private async sourceCodeStorageExists(bucketName: string, s3Client: S3Client): Promise<boolean> {
@@ -396,6 +462,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
         }
 
         try {
+            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, "updating deploy model")
             await this.prismaClient.$connect()
             const result = await this.prismaClient.deployModel.update({
                 where: {id: deleteDeployModelInfraInput.deployModelId},
@@ -403,6 +470,7 @@ export class DeployModelRepositoryImpl implements DeployModelRepository {
                     cloudFormationStackName: ""
                 }
             })
+            Logger.info(this.constructor.name, this.deleteDeployModelInfra.name, "deploy model updated with success")
             return new DeployModelEntity(
                 result.id,
                 result.deployModelName,

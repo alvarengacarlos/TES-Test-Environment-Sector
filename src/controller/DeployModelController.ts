@@ -21,7 +21,7 @@ import {
     CreateDeployModelInfraUseCase
 } from "../use-case/CreateDeployModelInfraUseCase";
 import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
-import {InfrastructureAlreadyProvisionedException} from "../exception/InfrastructureAlreadyProvisionedException";
+import {InfrastructureProvisionedException} from "../exception/InfrastructureProvisionedException";
 import {
     CheckDeployModelInfraStatusDtoInput,
     CheckDeployModelInfraStatusDtoOutput, CheckDeployModelInfraStatusUseCase
@@ -31,10 +31,12 @@ import {
     DeleteDeployModelInfraDtoInput,
     DeleteDeployModelInfraDtoOutput, DeleteDeployModelInfraUseCase
 } from "../use-case/DeleteDeployModelInfraUseCase";
+import {DeleteDeployModelDtoInput, DeleteDeployModelUseCase} from "../use-case/DeleteDeployModelUseCase";
 
 export class DeployModelController {
     constructor(
         private readonly createDeployModelUseCase: CreateDeployModelUseCase,
+        private readonly deleteDeployModelUseCase: DeleteDeployModelUseCase,
         private readonly uploadSourceCodeUseCase: UploadSourceCodeUseCase,
         private readonly saveAwsCredentialsUseCase: SaveAwsCredentialsUseCase,
         private readonly createDeployModelInfraUseCase: CreateDeployModelInfraUseCase,
@@ -48,6 +50,23 @@ export class DeployModelController {
             const createDeployModelDtoOutput = await this.createDeployModelUseCase.execute(httpRequest.data)
             return HttpResponse.created("Deploy model created with success", createDeployModelDtoOutput)
         } catch (error: any) {
+            return HttpResponse.internalServerError()
+        }
+    }
+
+    async deleteDeployModel(httpRequest: HttpRequest<DeleteDeployModelDtoInput>): Promise<HttpResponse<DeleteDeployModelInfraDtoOutput | null>> {
+        try {
+            const deleteDeployModelDtoOutput = await this.deleteDeployModelUseCase.execute(httpRequest.data)
+            return HttpResponse.ok("Deploy model deleted with success", deleteDeployModelDtoOutput)
+        } catch (error: any) {
+            if (error instanceof DeployModelDoesNotExistException) {
+                return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
+            }
+
+            if (error instanceof InfrastructureProvisionedException) {
+                return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_PROVISIONED, error.message, null)
+            }
+
             return HttpResponse.internalServerError()
         }
     }
@@ -93,8 +112,8 @@ export class DeployModelController {
                 return HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, error.message, null)
             }
 
-            if (error instanceof InfrastructureAlreadyProvisionedException) {
-                return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_ALREADY_PROVISIONED, error.message, null)
+            if (error instanceof InfrastructureProvisionedException) {
+                return HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_PROVISIONED, error.message, null)
             }
 
             if (error instanceof AwsCredentialsConfigurationMissingException) {

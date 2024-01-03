@@ -30,7 +30,7 @@ import {
 import {
     AwsCredentialsConfigurationMissingException
 } from "../../../src/exception/AwsCredentialsConfigurationMissingException";
-import {InfrastructureAlreadyProvisionedException} from "../../../src/exception/InfrastructureAlreadyProvisionedException";
+import {InfrastructureProvisionedException} from "../../../src/exception/InfrastructureProvisionedException";
 import {
     CheckDeployModelInfraStatusDtoInput, CheckDeployModelInfraStatusDtoOutput,
     CheckDeployModelInfraStatusUseCase
@@ -40,9 +40,15 @@ import {
     DeleteDeployModelInfraDtoInput, DeleteDeployModelInfraDtoOutput,
     DeleteDeployModelInfraUseCase
 } from "../../../src/use-case/DeleteDeployModelInfraUseCase";
+import {
+    DeleteDeployModelDtoInput,
+    DeleteDeployModelDtoOutput,
+    DeleteDeployModelUseCase
+} from "../../../src/use-case/DeleteDeployModelUseCase";
 
 describe("DeployModelController", () => {
     const createDeployModelUseCase = mockDeep<CreateDeployModelUseCase>()
+    const deleteDeployModelUseCase = mockDeep<DeleteDeployModelUseCase>()
     const uploadSourceCodeUseCase = mockDeep<UploadSourceCodeUseCase>()
     const saveAwsCredentialsUseCase = mockDeep<SaveAwsCredentialsUseCase>()
     const createDeployModelInfraUseCase = mockDeep<CreateDeployModelInfraUseCase>()
@@ -50,6 +56,7 @@ describe("DeployModelController", () => {
     const deleteDeployModelInfraUseCase = mockDeep<DeleteDeployModelInfraUseCase>()
     const deployModelController = new DeployModelController(
         createDeployModelUseCase,
+        deleteDeployModelUseCase,
         uploadSourceCodeUseCase,
         saveAwsCredentialsUseCase,
         createDeployModelInfraUseCase,
@@ -87,6 +94,49 @@ describe("DeployModelController", () => {
 
             expect(createDeployModelUseCase.execute).toBeCalledWith(httpRequest.data)
             expect(httpResponse).toEqual(HttpResponse.created("Deploy model created with success", createDeployModelDtoOutput))
+        })
+    })
+
+    describe("deleteDeployModel", () => {
+        const deleteDeployModelDtoInput = new DeleteDeployModelDtoInput(
+            randomUUID().toString(),
+        )
+        const httpRequest = new HttpRequest<DeleteDeployModelDtoInput>(deleteDeployModelDtoInput)
+
+        const deleteDeployModelDtoOutput = new DeleteDeployModelDtoOutput(
+            deleteDeployModelDtoInput.deployModelId,
+        )
+
+        test("should return bad request http response with DEPLOY_MODEL_DOES_NOT_EXIST api status code", async () => {
+            jest.spyOn(deleteDeployModelUseCase, "execute").mockRejectedValue(new DeployModelDoesNotExistException())
+
+            const httpResponse = await deployModelController.deleteDeployModel(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.DEPLOY_MODEL_DOES_NOT_EXIST, "Deploy model does not exist", null))
+        })
+
+        test("should return bad request http response with INFRASTRUCTURE_PROVISIONED api status code", async () => {
+            jest.spyOn(deleteDeployModelUseCase, "execute").mockRejectedValue(new InfrastructureProvisionedException())
+
+            const httpResponse = await deployModelController.deleteDeployModel(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_PROVISIONED, "Infrastructure provisioned", null))
+        })
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(deleteDeployModelUseCase, "execute").mockRejectedValue(new Error())
+
+            const httpResponse = await deployModelController.deleteDeployModel(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return ok http response", async () => {
+            jest.spyOn(deleteDeployModelUseCase, "execute").mockResolvedValue(deleteDeployModelDtoOutput)
+
+            const httpResponse = await deployModelController.deleteDeployModel(httpRequest)
+
+            expect(httpResponse).toEqual(HttpResponse.ok("Deploy model deleted with success", deleteDeployModelDtoOutput))
         })
     })
 
@@ -195,11 +245,11 @@ describe("DeployModelController", () => {
         })
 
         test("should return bad request http response with INFRASTRUCTURE_ALREADY_PROVISIONED api status code", async () => {
-            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new InfrastructureAlreadyProvisionedException())
+            jest.spyOn(createDeployModelInfraUseCase, "execute").mockRejectedValue(new InfrastructureProvisionedException())
 
             const httpResponse = await deployModelController.createDeployModelInfra(httpRequest)
 
-            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_ALREADY_PROVISIONED, "Infrastructure already provisioned", null))
+            expect(httpResponse).toEqual(HttpResponse.badRequest(ApiStatusCode.INFRASTRUCTURE_PROVISIONED, "Infrastructure provisioned", null))
         })
 
         test("should return bad request http response with AWS_CREDENTIALS_CONFIGURATION_MISSING api status code", async () => {

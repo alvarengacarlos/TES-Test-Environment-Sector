@@ -24,9 +24,11 @@ import {
     CheckDeployModelInfraStatusUseCase
 } from "../use-case/CheckDeployModelInfraStatusUseCase";
 import {DeleteDeployModelInfraDtoInput, DeleteDeployModelInfraUseCase} from "../use-case/DeleteDeployModelInfraUseCase";
+import {DeleteDeployModelDtoInput, DeleteDeployModelUseCase} from "../use-case/DeleteDeployModelUseCase";
 
 const deployModelRepository = new DeployModelRepositoryImpl(prismaClient, s3Client, secretsManagerClient)
 const createDeployModelUseCase = new CreateDeployModelUseCase(deployModelRepository)
+const deleteDeployModelUseCase = new DeleteDeployModelUseCase(deployModelRepository)
 const uploadSourceCodeUseCase = new UploadSourceCodeUseCase(deployModelRepository)
 const saveAwsCredentialsUseCase = new SaveAwsCredentialsUseCase(deployModelRepository)
 const deployModelInfraUseCase = new CreateDeployModelInfraUseCase(deployModelRepository)
@@ -34,6 +36,7 @@ const checkDeployModelInfraStatusUseCase = new CheckDeployModelInfraStatusUseCas
 const deleteDeployModelInfraUseCase = new DeleteDeployModelInfraUseCase(deployModelRepository)
 const deployModelController = new DeployModelController(
     createDeployModelUseCase,
+    deleteDeployModelUseCase,
     uploadSourceCodeUseCase,
     saveAwsCredentialsUseCase,
     deployModelInfraUseCase,
@@ -52,6 +55,19 @@ deployModelRouter.post("/deploy-model", setTokenInformations, deployModelValidat
         })
 
         const httpResponse = await deployModelController.createDeployModel(httpRequest)
+        response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+deployModelRouter.delete("/deploy-model/:deployModelId", deployModelValidator.deleteDeployModelValidator, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<DeleteDeployModelDtoInput>({
+            deployModelId: request.params.deployModelId
+        })
+
+        const httpResponse = await deployModelController.deleteDeployModel(httpRequest)
         response.status(httpResponse.httpStatusCode).json(httpResponse.body)
     } catch (error: any) {
         next(error)
