@@ -1,17 +1,16 @@
 import {DeployModelRepository} from "../repository/DeployModelRepository";
 import {DeployModelDoesNotExistException} from "../exception/DeployModelDoesNotExistException";
-import {AwsCredentialsConfigurationMissingException} from "../exception/AwsCredentialsConfigurationMissingException";
 import {InfrastructureProvisionedException} from "../exception/InfrastructureProvisionedException";
 
-export class CreateDeployModelInfraUseCase {
+export class DeleteDeployModelUseCase {
     constructor(
         private readonly deployModelRepository: DeployModelRepository
     ) {
     }
 
-    async execute(createDeployModelInfraDtoInput: CreateDeployModelInfraDtoInput): Promise<CreateDeployModelInfraDtoOutput> {
+    async execute(deleteDeployModelDtoInput: DeleteDeployModelDtoInput): Promise<DeleteDeployModelDtoOutput> {
         const deployModel = await this.deployModelRepository.findDeployModelById({
-            deployModelId: createDeployModelInfraDtoInput.deployModelId
+            deployModelId: deleteDeployModelDtoInput.deployModelId
         })
 
         if (!deployModel) {
@@ -22,28 +21,24 @@ export class CreateDeployModelInfraUseCase {
             throw new InfrastructureProvisionedException()
         }
 
-        if (deployModel.awsCredentialsPath == "") {
-            throw new AwsCredentialsConfigurationMissingException()
-        }
-
-        await this.deployModelRepository.createDeployModelInfra({
-            deployModelId: createDeployModelInfraDtoInput.deployModelId,
+        await this.deployModelRepository.deleteDeployModelById({
+            deployModelId: deployModel.id,
             awsCredentialsPath: deployModel.awsCredentialsPath,
-            ownerEmail: deployModel.ownerEmail
+            sourceCodePath: deployModel.sourceCodePath
         })
 
-        return new CreateDeployModelInfraDtoOutput(createDeployModelInfraDtoInput.deployModelId)
+        return new DeleteDeployModelDtoOutput(deployModel.id)
     }
 }
 
-export class CreateDeployModelInfraDtoInput {
+export class DeleteDeployModelDtoInput {
     constructor(
         public readonly deployModelId: string
     ) {
     }
 }
 
-export class CreateDeployModelInfraDtoOutput {
+export class DeleteDeployModelDtoOutput {
     constructor(
         public readonly deployModelId: string
     ) {

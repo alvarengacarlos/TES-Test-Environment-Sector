@@ -3,6 +3,7 @@ import {DeployModelInfraEntity} from "../entity/DeployModelInfraEntity";
 
 export interface DeployModelRepository {
     saveDeployModel(saveDeployModelInput: SaveDeployModelInput): Promise<DeployModelEntity>
+    deleteDeployModelById(deleteDeployModelByIdInput: DeleteDeployModelByIdInput): Promise<DeployModelEntity>
     findDeployModelById(findDeployModelByIdInput: FindDeployModelByIdInput): Promise<DeployModelEntity | null>
     saveSourceCode(saveSourceCodeInput: SaveSourceCodeInput): Promise<DeployModelEntity>
     saveAwsCredentials(saveAwsCredentialsInput: SaveAwsCredentialsInput): Promise<DeployModelEntity>
@@ -14,6 +15,12 @@ export interface DeployModelRepository {
 export type SaveDeployModelInput = {
     deployModelName: string,
     ownerEmail: string
+}
+
+export type DeleteDeployModelByIdInput = {
+    deployModelId: string,
+    awsCredentialsPath: string,
+    sourceCodePath: string
 }
 
 export type FindDeployModelByIdInput = {

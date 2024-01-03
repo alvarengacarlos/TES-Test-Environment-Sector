@@ -24,6 +24,24 @@ export class DeployModelValidator {
         next()
     }
 
+    deleteDeployModelValidator(request: Request, response: Response, next: NextFunction) {
+        const schema = Joi.object({
+            deployModelId: Joi.string()
+                .uuid()
+                .required()
+        })
+
+        const result = schema.validate(request.params)
+
+        if (result.error) {
+            const httpResponse = HttpResponse.badRequest<Array<ValidationErrorItem>>(ApiStatusCode.INVALID_INPUT, result.error.message, result.error.details)
+            return response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+        }
+
+        request.body = result.value
+        next()
+    }
+
     uploadSourceCodeValidator(request: Request, response: Response, next: NextFunction) {
         const schema = Joi.object({
             deployModelId: Joi.string()
