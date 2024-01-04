@@ -1,25 +1,29 @@
 import {ApiStatusCode, HttpResponse} from "../util/HttpResponse";
 import {HttpRequest} from "../util/HttpRequest";
-import {SignUpDtoInput, SignUpDtoOutput, SignUpUseCase} from "../use-case/SignUpUseCase";
-import {ConfirmSignUpDtoInput, ConfirmSignUpDtoOutput, ConfirmSignUpUseCase} from "../use-case/ConfirmSignUpUseCase";
-import {SignInDtoInput, SignInDtoOutput, SignInUseCase} from "../use-case/SignInUseCase";
 import {EmailExistsException} from "../exception/EmailExistsException";
 import {ExpiredConfirmationCodeException} from "../exception/ExpiredConfirmationCodeException";
 import {InvalidConfirmationCodeException} from "../exception/InvalidConfirmationCodeException";
 import {IncorrectEmailOrPasswordException} from "../exception/IncorrectEmailOrPasswordException";
 import {EmailNotConfirmedException} from "../exception/EmailNotConfirmedException";
+import {
+    ConfirmSignUpDtoInput,
+    ConfirmSignUpDtoOutput,
+    SignInDtoInput,
+    SignInDtoOutput,
+    SignUpDtoInput,
+    SignUpDtoOutput,
+    UserService
+} from "../service/UserService";
 
 export class UserController {
     constructor(
-        private signUpUseCase: SignUpUseCase,
-        private confirmSignUpUseCase: ConfirmSignUpUseCase,
-        private signInUseCase: SignInUseCase
+        private readonly userService: UserService,
     ) {
     }
 
     async signUp(httpRequest: HttpRequest<SignUpDtoInput>): Promise<HttpResponse<SignUpDtoOutput | null>> {
         try {
-            const signUpDtoOutput = await this.signUpUseCase.execute(httpRequest.data)
+            const signUpDtoOutput = await this.userService.signUp(httpRequest.data)
             return HttpResponse.created("Sign up executed with success", signUpDtoOutput)
 
         } catch (error: any) {
@@ -33,7 +37,7 @@ export class UserController {
 
     async confirmSignUp(httpRequest: HttpRequest<ConfirmSignUpDtoInput>): Promise<HttpResponse<ConfirmSignUpDtoOutput | null>> {
         try {
-            const confirmSignUpDtoOutput = await this.confirmSignUpUseCase.execute(httpRequest.data)
+            const confirmSignUpDtoOutput = await this.userService.confirmSignUp(httpRequest.data)
             return HttpResponse.ok("Confirm sign up executed with success", confirmSignUpDtoOutput)
 
         } catch (error: any) {
@@ -51,7 +55,7 @@ export class UserController {
 
     async signIn(httpRequest: HttpRequest<SignInDtoInput>): Promise<HttpResponse<SignInDtoOutput | null>> {
         try {
-            const signInDtoOutput = await this.signInUseCase.execute(httpRequest.data)
+            const signInDtoOutput = await this.userService.signIn(httpRequest.data)
             return HttpResponse.ok("Sign in executed with success", signInDtoOutput)
 
         } catch (error: any) {

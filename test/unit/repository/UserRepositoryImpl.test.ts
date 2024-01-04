@@ -33,7 +33,6 @@ describe("UserRepositoryImpl", () => {
             email: email,
             password: password
         }
-        const userEntity = new UserEntity(email, password)
 
         test("should throw EmailExistsException", async () => {
             cognitoClientMocked.on(SignUpCommand).rejects(new UsernameExistsException({
@@ -51,6 +50,7 @@ describe("UserRepositoryImpl", () => {
         })
 
         test("should save a user", async () => {
+            const userEntity = new UserEntity(email, password)
             cognitoClientMocked.on(SignUpCommand).resolves({})
 
             const output = await userRepository.saveUser(saveUserInput)
@@ -64,8 +64,6 @@ describe("UserRepositoryImpl", () => {
             email: email,
             confirmationCode: "000000"
         }
-        const userEntity = new UserEntity(email, "")
-
 
         test("should throw ExpiredConfirmationCodeException", async () => {
             cognitoClientMocked.on(ConfirmSignUpCommand).rejects(new ExpiredCodeException({
@@ -99,6 +97,7 @@ describe("UserRepositoryImpl", () => {
         })
 
         test("should update a user email to verified", async () => {
+            const userEntity = new UserEntity(email, "")
             cognitoClientMocked.on(ConfirmSignUpCommand).resolves({})
 
             const output = await userRepository.updateUserEmailToVerified(updateUserEmailToVerifiedInput)
@@ -112,12 +111,6 @@ describe("UserRepositoryImpl", () => {
             email: email,
             password: password
         }
-
-        const authenticationTokenEntity = new AuthenticationTokenEntity(
-            "identity-token",
-            "Bearer",
-            "refresh-token"
-        )
 
         test("should throw IncorrectEmailOrPasswordException", async () => {
             cognitoClientMocked.on(AdminInitiateAuthCommand).rejects(new UserNotFoundException({
@@ -151,6 +144,11 @@ describe("UserRepositoryImpl", () => {
         })
 
         test("should authenticate a user", async () => {
+            const authenticationTokenEntity = new AuthenticationTokenEntity(
+                "identity-token",
+                "Bearer",
+                "refresh-token"
+            )
             cognitoClientMocked.on(AdminInitiateAuthCommand).resolves({
                 AuthenticationResult: {
                     IdToken: authenticationTokenEntity.identityToken,
