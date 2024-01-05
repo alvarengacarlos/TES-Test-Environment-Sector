@@ -1,7 +1,7 @@
 import {
     CreateSecretCommand,
     DeleteSecretCommand,
-    GetSecretValueCommand,
+    GetSecretValueCommand, ResourceNotFoundException,
     SecretsManagerClient, UpdateSecretCommand
 } from "@aws-sdk/client-secrets-manager";
 
@@ -14,6 +14,7 @@ import {
 import {Logger} from "../util/Logger";
 import {SecretsManagerException} from "../exception/SecretsManagerException";
 import {AwsCredentialsEntity} from "../entity/AwsCredentialsEntity";
+import {AwsCredentialsDoesNotExistException} from "../exception/AwsCredentialsDoesNotExistException";
 
 export class AwsCredentialsRepositoryImpl implements AwsCredentialsRepository {
     constructor(
@@ -57,6 +58,10 @@ export class AwsCredentialsRepositoryImpl implements AwsCredentialsRepository {
             return new AwsCredentialsEntity(awsCredentials.accessKeyId, awsCredentials.secretAccessKey)
 
         } catch (error: any) {
+            if (error instanceof ResourceNotFoundException) {
+                throw new AwsCredentialsDoesNotExistException()
+            }
+
             Logger.error(this.constructor.name, this.findAwsCredentials.name, `Secrets Manager client throw ${error.message}`)
             throw new SecretsManagerException()
         }

@@ -5,12 +5,14 @@ import {
     CreateSecretCommand,
     DeleteSecretCommand,
     GetSecretValueCommand,
+    ResourceNotFoundException,
     UpdateSecretCommand
 } from "@aws-sdk/client-secrets-manager";
 
 import {AwsCredentialsRepositoryImpl} from "../../../src/repository/AwsCredentialsRepositoryImpl";
 import {secretsManagerClient} from "../../../src/infra/secretsManagerClient";
 import {SecretsManagerException} from "../../../src/exception/SecretsManagerException";
+import {AwsCredentialsDoesNotExistException} from "../../../src/exception/AwsCredentialsDoesNotExistException";
 
 describe("AwsCredentialsRepositoryImpl", () => {
     const secretsManagerClientMocked = mockClient(secretsManagerClient)
@@ -44,6 +46,15 @@ describe("AwsCredentialsRepositoryImpl", () => {
         const findAwsCredentialsInput = {
             ownerEmail: email
         }
+
+        test("should throw AwsCredentialsDoesNotExistException", async () => {
+            secretsManagerClientMocked.on(GetSecretValueCommand).rejects(new ResourceNotFoundException({
+                message: "",
+                $metadata: {}
+            }))
+
+            await expect(awsCredentialsRepository.findAwsCredentials(findAwsCredentialsInput)).rejects.toThrow(AwsCredentialsDoesNotExistException)
+        })
 
         test("should throw SecretsManagerException", async () => {
             secretsManagerClientMocked.on(GetSecretValueCommand).rejects(new Error())
