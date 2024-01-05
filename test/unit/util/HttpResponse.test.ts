@@ -1,5 +1,5 @@
-import {describe, expect, test} from "@jest/globals";
-import {ApiStatusCode, HttpResponse} from "../../../src/util/HttpResponse";
+import { describe, expect, test } from "@jest/globals"
+import { ApiStatusCode, HttpResponse } from "../../../src/util/HttpResponse"
 
 describe("HttpResponse", () => {
     describe("ok", () => {
@@ -11,8 +11,8 @@ describe("HttpResponse", () => {
                 body: {
                     apiStatusCode: ApiStatusCode.SUCCESS,
                     message: "test",
-                    data: "test"
-                }
+                    data: "test",
+                },
             })
         })
     })
@@ -26,38 +26,46 @@ describe("HttpResponse", () => {
                 body: {
                     apiStatusCode: ApiStatusCode.SUCCESS,
                     message: "test",
-                    data: "test"
-                }
+                    data: "test",
+                },
             })
         })
     })
 
     describe("badRequest", () => {
         test("should return a formatted bad request http response", () => {
-            const httpResponse = HttpResponse.badRequest<string>(ApiStatusCode.INVALID_INPUT, "test", "test")
+            const httpResponse = HttpResponse.badRequest<string>(
+                ApiStatusCode.INVALID_INPUT,
+                "test",
+                "test",
+            )
 
             expect(httpResponse).toEqual({
                 httpStatusCode: 400,
                 body: {
                     apiStatusCode: ApiStatusCode.INVALID_INPUT,
                     message: "test",
-                    data: "test"
-                }
+                    data: "test",
+                },
             })
         })
     })
 
     describe("conflict", () => {
         test("should return a formatted conflict http response", () => {
-            const httpResponse = HttpResponse.conflict<string>(ApiStatusCode.EMAIL_EXISTS, "test", "test")
+            const httpResponse = HttpResponse.conflict<string>(
+                ApiStatusCode.EMAIL_EXISTS,
+                "test",
+                "test",
+            )
 
             expect(httpResponse).toEqual({
                 httpStatusCode: 409,
                 body: {
                     apiStatusCode: ApiStatusCode.EMAIL_EXISTS,
                     message: "test",
-                    data: "test"
-                }
+                    data: "test",
+                },
             })
         })
     })
@@ -71,8 +79,8 @@ describe("HttpResponse", () => {
                 body: {
                     apiStatusCode: ApiStatusCode.RESOURCE_NOT_FOUND,
                     message: "Resource not found",
-                    data: null
-                }
+                    data: null,
+                },
             })
         })
     })
@@ -86,8 +94,8 @@ describe("HttpResponse", () => {
                 body: {
                     apiStatusCode: ApiStatusCode.INTERNAL_ERROR,
                     message: "Internal server error",
-                    data: null
-                }
+                    data: null,
+                },
             })
         })
     })
