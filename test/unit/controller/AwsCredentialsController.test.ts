@@ -3,6 +3,7 @@ import {mockDeep} from "jest-mock-extended";
 
 import {AwsCredentialsController} from "../../../src/controller/AwsCredentialsController";
 import {
+    AwsCredentialsExistsDtoInput, AwsCredentialsExistsDtoOutput,
     AwsCredentialsService, DeleteAwsCredentialsDtoInput, DeleteAwsCredentialsDtoOutput,
     SaveAwsCredentialsDtoInput,
     SaveAwsCredentialsDtoOutput, UpdateAwsCredentialsDtoInput, UpdateAwsCredentialsDtoOutput
@@ -44,6 +45,32 @@ describe("AwsCredentialsController", () => {
 
             expect(awsCredentialsService.saveAwsCredentials).toBeCalledWith(httpRequest.data)
             expect(httpResponse).toEqual(HttpResponse.created("Aws credentials saved with success", saveAwsCredentialsDtoOutput))
+        })
+    })
+
+    describe("awsCredentialsExists", () => {
+        const awsCredentialsExistsDtoInput = new AwsCredentialsExistsDtoInput(
+            email,
+        )
+        const httpRequest = new HttpRequest(awsCredentialsExistsDtoInput)
+
+        test("should return internal server error http response", async () => {
+            jest.spyOn(awsCredentialsService, "awsCredentialsExists").mockRejectedValue(new Error())
+
+            const httpResponse = await awsCredentialsController.awsCredentialsExists(httpRequest)
+
+            expect(awsCredentialsService.awsCredentialsExists).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.internalServerError())
+        })
+
+        test("should return created http response", async () => {
+            const awsCredentialsExistsDtoOutput = new AwsCredentialsExistsDtoOutput(true)
+            jest.spyOn(awsCredentialsService, "awsCredentialsExists").mockResolvedValue(awsCredentialsExistsDtoOutput)
+
+            const httpResponse = await awsCredentialsController.awsCredentialsExists(httpRequest)
+
+            expect(awsCredentialsService.awsCredentialsExists).toBeCalledWith(httpRequest.data)
+            expect(httpResponse).toEqual(HttpResponse.ok("Aws credentials got with success", awsCredentialsExistsDtoOutput))
         })
     })
 

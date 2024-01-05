@@ -2,6 +2,7 @@ import express, {NextFunction, Request, Response} from "express";
 import {AwsCredentialsValidator} from "../middleware/AwsCredentialsValidator";
 import {HttpRequest} from "../util/HttpRequest";
 import {
+    AwsCredentialsExistsDtoInput,
     AwsCredentialsService, DeleteAwsCredentialsDtoInput,
     SaveAwsCredentialsDtoInput,
     UpdateAwsCredentialsDtoInput
@@ -27,6 +28,19 @@ awsCredentialsRouter.post("/aws-credentials", setTokenInformations, awsCredentia
             secretAccessKey: request.body.secretAccessKey
         })
         const httpResponse = await awsCredentialsController.saveAwsCredentials(httpRequest)
+        return response.status(httpResponse.httpStatusCode).json(httpResponse.body)
+
+    } catch (error: any) {
+        next(error)
+    }
+})
+
+awsCredentialsRouter.get("/aws-credentials/exists", setTokenInformations, async (request: Request, response: Response, next: NextFunction) => {
+    try {
+        const httpRequest = new HttpRequest<AwsCredentialsExistsDtoInput>({
+            ownerEmail: String(request.headers.requesterEmail),
+        })
+        const httpResponse = await awsCredentialsController.awsCredentialsExists(httpRequest)
         return response.status(httpResponse.httpStatusCode).json(httpResponse.body)
 
     } catch (error: any) {

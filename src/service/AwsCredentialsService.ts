@@ -1,4 +1,5 @@
 import {AwsCredentialsRepository} from "../repository/AwsCredentialsRepository";
+import {AwsCredentialsDoesNotExistException} from "../exception/AwsCredentialsDoesNotExistException";
 
 export class AwsCredentialsService {
     constructor(
@@ -24,6 +25,21 @@ export class AwsCredentialsService {
             awsCredentials.accessKeyId,
             awsCredentials.secretAccessKey
         )
+    }
+
+    async awsCredentialsExists(awsCredentialsExistsDtoInput: AwsCredentialsExistsDtoInput): Promise<AwsCredentialsExistsDtoOutput> {
+        try {
+            await this.awsCredentialsRepository.findAwsCredentials({
+                ownerEmail: awsCredentialsExistsDtoInput.ownerEmail
+            })
+            return new AwsCredentialsExistsDtoOutput(true)
+
+        } catch (error: any) {
+            if (error instanceof AwsCredentialsDoesNotExistException) {
+                return new AwsCredentialsExistsDtoOutput(false)
+            }
+            throw error
+        }
     }
 
     async updateAwsCredentials(updateAwsCredentialsDtoInput: UpdateAwsCredentialsDtoInput): Promise<UpdateAwsCredentialsDtoOutput> {
@@ -69,6 +85,20 @@ export class FindAwsCredentialsDtoOutput {
     constructor(
         public readonly accessKeyId: string,
         public readonly secretAccessKey: string
+    ) {
+    }
+}
+
+export class AwsCredentialsExistsDtoInput {
+    constructor(
+        public readonly ownerEmail: string
+    ) {
+    }
+}
+
+export class AwsCredentialsExistsDtoOutput {
+    constructor(
+        public readonly exists: boolean
     ) {
     }
 }

@@ -2,6 +2,7 @@ import {describe, expect, jest, test} from "@jest/globals";
 import {mockDeep} from "jest-mock-extended";
 
 import {
+    AwsCredentialsExistsDtoInput, AwsCredentialsExistsDtoOutput,
     AwsCredentialsService,
     DeleteAwsCredentialsDtoInput,
     DeleteAwsCredentialsDtoOutput,
@@ -15,6 +16,7 @@ import {
 import {AwsCredentialsRepository} from "../../../src/repository/AwsCredentialsRepository";
 import {faker} from "@faker-js/faker";
 import {AwsCredentialsEntity} from "../../../src/entity/AwsCredentialsEntity";
+import {AwsCredentialsDoesNotExistException} from "../../../src/exception/AwsCredentialsDoesNotExistException";
 
 describe("AwsCredentialsService", () => {
     const awsCredentialsRepository = mockDeep<AwsCredentialsRepository>()
@@ -58,6 +60,33 @@ describe("AwsCredentialsService", () => {
                 ownerEmail: email
             })
             expect(output).toEqual(new FindAwsCredentialsDtoOutput(accessKeyId, secretAccessKey))
+        })
+    })
+
+    describe("awsCredentialsExists", () => {
+        const awsCredentialsExistsDtoInput = new AwsCredentialsExistsDtoInput(email)
+
+        test("should return aws credentials does not exist", async () => {
+            jest.spyOn(awsCredentialsRepository, "findAwsCredentials").mockRejectedValue(new AwsCredentialsDoesNotExistException())
+
+            const output = await awsCredentialsService.awsCredentialsExists(awsCredentialsExistsDtoInput)
+
+            expect(awsCredentialsRepository.findAwsCredentials).toBeCalledWith({
+                ownerEmail: email
+            })
+            expect(output).toEqual(new AwsCredentialsExistsDtoOutput(false))
+        })
+
+        test("should return aws credentials exists", async () => {
+            const awsCredentialsEntity = new AwsCredentialsEntity(accessKeyId, secretAccessKey)
+            jest.spyOn(awsCredentialsRepository, "findAwsCredentials").mockResolvedValue(awsCredentialsEntity)
+
+            const output = await awsCredentialsService.awsCredentialsExists(awsCredentialsExistsDtoInput)
+
+            expect(awsCredentialsRepository.findAwsCredentials).toBeCalledWith({
+                ownerEmail: email
+            })
+            expect(output).toEqual(new AwsCredentialsExistsDtoOutput(true))
         })
     })
 

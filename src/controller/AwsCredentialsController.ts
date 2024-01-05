@@ -1,6 +1,7 @@
 import {HttpRequest} from "../util/HttpRequest";
 import {HttpResponse} from "../util/HttpResponse";
 import {
+    AwsCredentialsExistsDtoInput, AwsCredentialsExistsDtoOutput,
     AwsCredentialsService,
     DeleteAwsCredentialsDtoInput,
     DeleteAwsCredentialsDtoOutput,
@@ -20,6 +21,16 @@ export class AwsCredentialsController {
         try {
             const saveAwsCredentialsDtoOutput = await this.awsCredentialsService.saveAwsCredentials(httpRequest.data)
             return HttpResponse.created("Aws credentials saved with success", saveAwsCredentialsDtoOutput)
+
+        } catch (error: any) {
+            return HttpResponse.internalServerError()
+        }
+    }
+
+    async awsCredentialsExists(httpRequest: HttpRequest<AwsCredentialsExistsDtoInput>): Promise<HttpResponse<AwsCredentialsExistsDtoOutput | null>> {
+        try {
+            const awsCredentialsExistsDtoOutput = await this.awsCredentialsService.awsCredentialsExists(httpRequest.data)
+            return HttpResponse.ok("Aws credentials got with success", awsCredentialsExistsDtoOutput)
 
         } catch (error: any) {
             return HttpResponse.internalServerError()
