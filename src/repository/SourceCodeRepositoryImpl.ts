@@ -108,11 +108,7 @@ export class SourceCodeRepositoryImpl implements SourceCodeRepository {
             const output = await s3Client.send(listObjectsCommand)
             Logger.info(this.constructor.name, this.findSourceCodes.name, "list objects command executed with success")
 
-            if (!output.Contents) {
-                throw new Error("Contents undefined")
-            }
-
-            if (output.Contents.length == 0) {
+            if (!output.Contents || output.Contents.length == 0) {
                 return []
             }
 
