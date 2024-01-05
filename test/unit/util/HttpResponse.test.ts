@@ -62,6 +62,21 @@ describe("HttpResponse", () => {
         })
     })
 
+    describe("notFound", () => {
+        test("should return a formatted not found http response", () => {
+            const httpResponse = HttpResponse.notFound()
+
+            expect(httpResponse).toEqual({
+                httpStatusCode: 404,
+                body: {
+                    apiStatusCode: ApiStatusCode.RESOURCE_NOT_FOUND,
+                    message: "Resource not found",
+                    data: null
+                }
+            })
+        })
+    })
+
     describe("internalServerError", () => {
         test("should return a formatted internal server error http response", () => {
             const httpResponse = HttpResponse.internalServerError()

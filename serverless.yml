@@ -45,15 +45,19 @@ functions:
       - http:
           path: /sign-up
           method: post
+          cors: true
       - http:
           path: /confirm-sign-up
           method: post
+          cors: true
       - http:
           path: /sign-in
           method: post
+          cors: true
       - http:
           path: /{proxy+}
           method: any
+          cors: true
           authorizer:
             name: ${self:custom.cognitoUserPoolName}
             type: COGNITO_USER_POOLS
