@@ -1,5 +1,5 @@
 export class ExpiredConfirmationCodeException extends Error {
     constructor() {
-        super("Expired confirmation code");
+        super("Expired confirmation code")
     }
 }

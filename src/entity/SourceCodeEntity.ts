@@ -1,6 +1,3 @@
 export class SourceCodeEntity {
-    constructor(
-        public readonly sourceCodePath: string
-    ) {
-    }
+    constructor(public readonly sourceCodePath: string) {}
 }

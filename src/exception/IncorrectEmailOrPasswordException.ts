@@ -1,5 +1,5 @@
 export class IncorrectEmailOrPasswordException extends Error {
     constructor() {
-        super("Incorrect email or password");
+        super("Incorrect email or password")
     }
 }

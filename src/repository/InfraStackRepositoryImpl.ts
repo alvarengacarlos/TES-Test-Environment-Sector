@@ -1,25 +1,36 @@
 import {
-    InfraStackRepository, CreateInfraStackInput, DeleteInfraStackInput, FindInfraStacksInput,
-} from "./InfraStackRepository";
-import {getCloudFormationClientWithCredentials} from "../infra/cloudFormationClient";
-import {Logger} from "../util/Logger";
-import {CreateStackCommand, DeleteStackCommand, DescribeStacksCommand} from "@aws-sdk/client-cloudformation";
-import {CloudFormationException} from "../exception/CloudFormationException";
-import {randomUUID} from "crypto";
-import {InfraStackEntity} from "../entity/InfraStackEntity";
+    InfraStackRepository,
+    CreateInfraStackInput,
+    DeleteInfraStackInput,
+    FindInfraStacksInput,
+} from "./InfraStackRepository"
+import { getCloudFormationClientWithCredentials } from "../infra/cloudFormationClient"
+import { Logger } from "../util/Logger"
+import {
+    CreateStackCommand,
+    DeleteStackCommand,
+    DescribeStacksCommand,
+} from "@aws-sdk/client-cloudformation"
+import { CloudFormationException } from "../exception/CloudFormationException"
+import { InfraStackEntity } from "../entity/InfraStackEntity"
 
 export class InfraStackRepositoryImpl implements InfraStackRepository {
     constructor(
-        private readonly getCloudFormationClient = getCloudFormationClientWithCredentials
-    ) {
-    }
+        private readonly getCloudFormationClient = getCloudFormationClientWithCredentials,
+    ) {}
 
-    async createInfraStack(createInfraStackInput: CreateInfraStackInput): Promise<void> {
+    async createInfraStack(
+        createInfraStackInput: CreateInfraStackInput,
+    ): Promise<void> {
         try {
-            Logger.info(this.constructor.name, this.createInfraStack.name, `executing create stack command`)
+            Logger.info(
+                this.constructor.name,
+                this.createInfraStack.name,
+                "executing create stack command",
+            )
             const cloudFormationClient = this.getCloudFormationClient(
                 createInfraStackInput.awsCredentials.accessKeyId,
-                createInfraStackInput.awsCredentials.secretAccessKey
+                createInfraStackInput.awsCredentials.secretAccessKey,
             )
             const createStackCommand = new CreateStackCommand({
                 StackName: `tes-cloudformation-stack-${createInfraStackInput.appName}`,
@@ -27,27 +38,41 @@ export class InfraStackRepositoryImpl implements InfraStackRepository {
                 Parameters: [
                     {
                         ParameterKey: "SourceCodePath",
-                        ParameterValue: createInfraStackInput.sourceCodePath
-                    }
+                        ParameterValue: createInfraStackInput.sourceCodePath,
+                    },
                 ],
                 Capabilities: ["CAPABILITY_IAM"],
-                OnFailure: "DELETE"
+                OnFailure: "DELETE",
             })
 
             await cloudFormationClient.send(createStackCommand)
-            Logger.info(this.constructor.name, this.createInfraStack.name, `create stack command executed with success`)
+            Logger.info(
+                this.constructor.name,
+                this.createInfraStack.name,
+                "create stack command executed with success",
+            )
         } catch (error: any) {
-            Logger.error(this.constructor.name, this.createInfraStack.name, `CloudFormation client throw ${error.message}`)
+            Logger.error(
+                this.constructor.name,
+                this.createInfraStack.name,
+                `CloudFormation client throw ${error.message}`,
+            )
             throw new CloudFormationException()
         }
     }
 
-    async findInfraStacks(findInfraStacksInput: FindInfraStacksInput): Promise<Array<InfraStackEntity | null>> {
+    async findInfraStacks(
+        findInfraStacksInput: FindInfraStacksInput,
+    ): Promise<Array<InfraStackEntity | null>> {
         try {
-            Logger.info(this.constructor.name, this.findInfraStacks.name, "executing describe stack command")
+            Logger.info(
+                this.constructor.name,
+                this.findInfraStacks.name,
+                "executing describe stack command",
+            )
             const cloudFormationClient = this.getCloudFormationClient(
                 findInfraStacksInput.awsCredentials.accessKeyId,
-                findInfraStacksInput.awsCredentials.secretAccessKey
+                findInfraStacksInput.awsCredentials.secretAccessKey,
             )
             const describeStackCommand = new DescribeStacksCommand({})
             const output = await cloudFormationClient.send(describeStackCommand)
@@ -56,45 +81,68 @@ export class InfraStackRepositoryImpl implements InfraStackRepository {
                 throw new Error("Stacks undefined")
             }
 
-            Logger.info(this.constructor.name, this.findInfraStacks.name, "describe stack command executed with success")
+            Logger.info(
+                this.constructor.name,
+                this.findInfraStacks.name,
+                "describe stack command executed with success",
+            )
 
             if (output.Stacks.length == 0) {
                 return []
             }
 
             return output.Stacks.filter((stack) => {
-                if (String(stack.StackName).includes("tes-cloudformation-stack")) {
+                if (
+                    String(stack.StackName).includes("tes-cloudformation-stack")
+                ) {
                     return stack
                 }
             }).map((stack) => {
                 return new InfraStackEntity(
                     String(stack.StackId),
                     String(stack.StackName),
-                    String(stack.StackStatus)
+                    String(stack.StackStatus),
                 )
             })
-
         } catch (error: any) {
-            Logger.error(this.constructor.name, this.findInfraStacks.name, `CloudFormation client throw ${error.message}`)
+            Logger.error(
+                this.constructor.name,
+                this.findInfraStacks.name,
+                `CloudFormation client throw ${error.message}`,
+            )
             throw new CloudFormationException()
         }
     }
 
-    async deleteInfraStack(deleteInfraStackInput: DeleteInfraStackInput): Promise<void> {
+    async deleteInfraStack(
+        deleteInfraStackInput: DeleteInfraStackInput,
+    ): Promise<void> {
         try {
-            Logger.info(this.constructor.name, this.deleteInfraStack.name, `executing delete stack command`)
+            Logger.info(
+                this.constructor.name,
+                this.deleteInfraStack.name,
+                "executing delete stack command",
+            )
             const cloudFormationClient = this.getCloudFormationClient(
                 deleteInfraStackInput.awsCredentials.accessKeyId,
-                deleteInfraStackInput.awsCredentials.secretAccessKey
+                deleteInfraStackInput.awsCredentials.secretAccessKey,
             )
             const deleteStackCommand = new DeleteStackCommand({
                 StackName: deleteInfraStackInput.stackName,
             })
 
             await cloudFormationClient.send(deleteStackCommand)
-            Logger.info(this.constructor.name, this.deleteInfraStack.name, `delete stack command executed with success`)
+            Logger.info(
+                this.constructor.name,
+                this.deleteInfraStack.name,
+                "delete stack command executed with success",
+            )
         } catch (error: any) {
-            Logger.error(this.constructor.name, this.deleteInfraStack.name, `CloudFormation client throw ${error.message}`)
+            Logger.error(
+                this.constructor.name,
+                this.deleteInfraStack.name,
+                `CloudFormation client throw ${error.message}`,
+            )
             throw new CloudFormationException()
         }
     }

@@ -1,39 +1,44 @@
-import {AwsCredentialsRepository} from "../repository/AwsCredentialsRepository";
-import {AwsCredentialsDoesNotExistException} from "../exception/AwsCredentialsDoesNotExistException";
+import { AwsCredentialsRepository } from "../repository/AwsCredentialsRepository"
+import { AwsCredentialsDoesNotExistException } from "../exception/AwsCredentialsDoesNotExistException"
 
 export class AwsCredentialsService {
     constructor(
-        private readonly awsCredentialsRepository: AwsCredentialsRepository
-    ) {
-    }
+        private readonly awsCredentialsRepository: AwsCredentialsRepository,
+    ) {}
 
-    async saveAwsCredentials(saveAwsCredentialsDtoInput: SaveAwsCredentialsDtoInput): Promise<SaveAwsCredentialsDtoOutput> {
+    async saveAwsCredentials(
+        saveAwsCredentialsDtoInput: SaveAwsCredentialsDtoInput,
+    ): Promise<SaveAwsCredentialsDtoOutput> {
         await this.awsCredentialsRepository.saveAwsCredentials({
             ownerEmail: saveAwsCredentialsDtoInput.ownerEmail,
             accessKeyId: saveAwsCredentialsDtoInput.accessKeyId,
-            secretAccessKey: saveAwsCredentialsDtoInput.secretAccessKey
+            secretAccessKey: saveAwsCredentialsDtoInput.secretAccessKey,
         })
 
         return new SaveAwsCredentialsDtoOutput()
     }
 
-    async findAwsCredentials(findAwsCredentialsDtoInput: FindAwsCredentialsDtoInput): Promise<FindAwsCredentialsDtoOutput> {
-        const awsCredentials = await this.awsCredentialsRepository.findAwsCredentials({
-            ownerEmail: findAwsCredentialsDtoInput.ownerEmail
-        })
+    async findAwsCredentials(
+        findAwsCredentialsDtoInput: FindAwsCredentialsDtoInput,
+    ): Promise<FindAwsCredentialsDtoOutput> {
+        const awsCredentials =
+            await this.awsCredentialsRepository.findAwsCredentials({
+                ownerEmail: findAwsCredentialsDtoInput.ownerEmail,
+            })
         return new FindAwsCredentialsDtoOutput(
             awsCredentials.accessKeyId,
-            awsCredentials.secretAccessKey
+            awsCredentials.secretAccessKey,
         )
     }
 
-    async awsCredentialsExists(awsCredentialsExistsDtoInput: AwsCredentialsExistsDtoInput): Promise<AwsCredentialsExistsDtoOutput> {
+    async awsCredentialsExists(
+        awsCredentialsExistsDtoInput: AwsCredentialsExistsDtoInput,
+    ): Promise<AwsCredentialsExistsDtoOutput> {
         try {
             await this.awsCredentialsRepository.findAwsCredentials({
-                ownerEmail: awsCredentialsExistsDtoInput.ownerEmail
+                ownerEmail: awsCredentialsExistsDtoInput.ownerEmail,
             })
             return new AwsCredentialsExistsDtoOutput(true)
-
         } catch (error: any) {
             if (error instanceof AwsCredentialsDoesNotExistException) {
                 return new AwsCredentialsExistsDtoOutput(false)
@@ -42,19 +47,23 @@ export class AwsCredentialsService {
         }
     }
 
-    async updateAwsCredentials(updateAwsCredentialsDtoInput: UpdateAwsCredentialsDtoInput): Promise<UpdateAwsCredentialsDtoOutput> {
+    async updateAwsCredentials(
+        updateAwsCredentialsDtoInput: UpdateAwsCredentialsDtoInput,
+    ): Promise<UpdateAwsCredentialsDtoOutput> {
         await this.awsCredentialsRepository.updateAwsCredentials({
             ownerEmail: updateAwsCredentialsDtoInput.ownerEmail,
             accessKeyId: updateAwsCredentialsDtoInput.accessKeyId,
-            secretAccessKey: updateAwsCredentialsDtoInput.secretAccessKey
+            secretAccessKey: updateAwsCredentialsDtoInput.secretAccessKey,
         })
 
         return new UpdateAwsCredentialsDtoOutput()
     }
 
-    async deleteAwsCredentials(deleteAwsCredentialsDtoOutput: DeleteAwsCredentialsDtoInput): Promise<DeleteAwsCredentialsDtoOutput> {
+    async deleteAwsCredentials(
+        deleteAwsCredentialsDtoOutput: DeleteAwsCredentialsDtoInput,
+    ): Promise<DeleteAwsCredentialsDtoOutput> {
         await this.awsCredentialsRepository.deleteAwsCredentials({
-            ownerEmail: deleteAwsCredentialsDtoOutput.ownerEmail
+            ownerEmail: deleteAwsCredentialsDtoOutput.ownerEmail,
         })
         return new DeleteAwsCredentialsDtoOutput()
     }
@@ -64,67 +73,49 @@ export class SaveAwsCredentialsDtoInput {
     constructor(
         public readonly ownerEmail: string,
         public readonly accessKeyId: string,
-        public readonly secretAccessKey: string
-    ) {
-    }
+        public readonly secretAccessKey: string,
+    ) {}
 }
 
 export class SaveAwsCredentialsDtoOutput {
-    constructor() {
-    }
+    constructor() {}
 }
 
 export class FindAwsCredentialsDtoInput {
-    constructor(
-        public readonly ownerEmail: string
-    ) {
-    }
+    constructor(public readonly ownerEmail: string) {}
 }
 
 export class FindAwsCredentialsDtoOutput {
     constructor(
         public readonly accessKeyId: string,
-        public readonly secretAccessKey: string
-    ) {
-    }
+        public readonly secretAccessKey: string,
+    ) {}
 }
 
 export class AwsCredentialsExistsDtoInput {
-    constructor(
-        public readonly ownerEmail: string
-    ) {
-    }
+    constructor(public readonly ownerEmail: string) {}
 }
 
 export class AwsCredentialsExistsDtoOutput {
-    constructor(
-        public readonly exists: boolean
-    ) {
-    }
+    constructor(public readonly exists: boolean) {}
 }
 
 export class UpdateAwsCredentialsDtoInput {
     constructor(
         public readonly ownerEmail: string,
         public readonly accessKeyId: string,
-        public readonly secretAccessKey: string
-    ) {
-    }
+        public readonly secretAccessKey: string,
+    ) {}
 }
 
 export class UpdateAwsCredentialsDtoOutput {
-    constructor() {
-    }
+    constructor() {}
 }
 
 export class DeleteAwsCredentialsDtoInput {
-    constructor(
-        public readonly ownerEmail: string
-    ) {
-    }
+    constructor(public readonly ownerEmail: string) {}
 }
 
 export class DeleteAwsCredentialsDtoOutput {
-    constructor() {
-    }
+    constructor() {}
 }
