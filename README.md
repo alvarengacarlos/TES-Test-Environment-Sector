@@ -4,6 +4,13 @@
 
 O TES é uma plataforma utilizada para criação de ambientes de desenvolvimento na nuvem.
 
+## Documentação
+Este é o diagrama AWS da aplicação e inclui os recursos utilizados para o seu desenvolvimento:
+
+![](docs/tes-backend-aws-driagram.jpg)
+
+Toda a diagramação foi feita utilizando a ferramenta `Draw.io` e estão disponíveis no arquivo `docs/tes-backend.drawio`.
+
 ## Requisitos
 Estes são os requisitos da aplicação:
 - [Serverless Framework versão 3](https://www.serverless.com/framework/docs)
@@ -13,29 +20,24 @@ Estes são os requisitos da aplicação:
 - Linux
 
 ## Implantação
-Para realizar a implantação siga os seguintes passos:
-- Execute o comando abaixo para configurar a variável de ambiente `DATABASE_URL`. Lembre-se de substituir os valores `USERNAME`, `PASSWORD`, `HOST` e `DATABASE_NAME`:
-```bash
-export DATABASE_URL=mongodb+srv://USERNAME:PASSWORD@HOST/DATABASE_NAME
-# exemplo: 'mongodb+srv://root:rootpw@mongo-atlas.com/tes'
-```
+- Autentique a sua AWS CLI.
 
-- Execute o comando abaixo para criar as migrações no banco de dados:
+- Execute o comando abaixo para implantar a aplicação. Utilize o stage como `dev` ou `prod`:
 ```bash
-rm -r node_modules && \
+export STAGE="dev"
+
+rm -r node_modules dist && \
 npm install && \
-npm run migrate
+npm run build && \
+sls deploy --stage $STAGE
 ```
 
-- Execute o comando abaixo para implantar a aplicação. Não se esqueça de configurar o parâmetro `databaseUrl` com o mesmo valor utilizado na variável de ambiente `DATABASE_URL`:
+- Envie os templates CloudFormation para o bucket:
 ```bash
-rm -r dist && \
-npm run build && \
-sls deploy --stage dev --param="databaseUrl=mongodb+srv://USERNAME:PASSWORD@HOST/DATABASE_NAME"
-# exemplo de databaseUrl: "databaseUrl=mongodb+srv://root:rootpw@mongo-atlas.com/tes"
+aws s3 cp templates/ContainerModel.yaml s3://$STAGE-tes-s3-bucket/ContainerModel.yaml
 ```
 
 Para realizar a remoção execute o seguinte comando:
 ```bash
-sls remove --stage dev --param="databaseUrl=mongodb+srv://USERNAME:PASSWORD@HOST/DATABASE_NAME"
+sls remove --stage dev
 ```

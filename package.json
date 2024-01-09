@@ -1,5 +1,5 @@
 {
-  "name": "tes",
+  "name": "tes-backend",
   "version": "0.0.1",
   "scripts": {
     "test:unit": "jest test/unit/",

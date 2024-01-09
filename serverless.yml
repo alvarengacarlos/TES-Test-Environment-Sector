@@ -1,4 +1,4 @@
-service: tes
+service: tes-backend
 frameworkVersion: '3'
 
 provider:

@@ -1,0 +1,501 @@
+openapi: 3.1.0
+info:
+  title: tes-backend
+  version: 0.0.1
+paths:
+  /sign-up:
+    post:
+      summary: Sign up
+      description: Cria uma conta nova
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+            example:
+              email: "fulano@email.com"
+              password: "Fulano@123"
+      responses:
+        201:
+          description: Conta criada com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Sign up executed with success"
+                data:
+                  email: "fulano@email.com"
+        400:
+          $ref: "#/components/responses/invalidInputResponse"
+        409:
+          description: Email já cadastrado
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "EMAIL_EXISTS"
+                message: "Email exists"
+                data: null
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /confirm-sign-up:
+    post:
+      summary: Confirmação do sign up
+      description: Confirma a criação da conta
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                confirmationCode:
+                  type: string
+            example:
+              email: "fulano@email.com"
+              cofirmationCode: "216468"
+      responses:
+        200:
+          description: Conta confirmada com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Confirm sign up executed with success"
+                data:
+                  email: "fulano@email.com"
+        400:
+          description: Erro do cliente
+          content:
+            "application/json":
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/responseWithDataSchema"
+                  - $ref: "#/components/schemas/responseWithoutDataSchema"
+              examples:
+                - $ref: "#/components/examples/invalidInputResponseExample"
+                - $ref: "#/components/examples/expiredConfirmationCodeResponseExample"
+                - $ref: "#/components/examples/invalidConfirmationCodeResponseExample"
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /sign-in:
+    post:
+      summary: Autenticação
+      description: Faz a autenticação da conta
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+            example:
+              email: "fulano@email.com"
+              password: "Fulano@123"
+      responses:
+        200:
+          description: Autenticado com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Sign in executed with success"
+                data:
+                  "identityToken": "eyJraWQiOi..."
+                  "identityTokenType": "Bearer"
+                  "refreshToken": "eyJjdHkiOiJ..."
+        400:
+          description: Erro do cliente
+          content:
+            "application/json":
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/responseWithDataSchema"
+                  - $ref: "#/components/schemas/responseWithoutDataSchema"
+              examples:
+                - $ref: "#/components/examples/invalidInputResponseExample"
+                - $ref: "#/components/examples/incorrectEmailOrPasswordResponseExample"
+                - $ref: "#/components/examples/emailNotConfirmedResponseExample"
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /aws-credentials:
+    post:
+      summary: Salva credenciais da AWS
+      description: Salva credenciais da AWS
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                accessKeyId:
+                  type: string
+                secretAccessKey:
+                  type: string
+            examples:
+              - $ref: "#/components/examples/awsCredentialsRequestExample"
+      responses:
+        201:
+          description: Credenciais salvas com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Aws credentials saved with success"
+                data: {}
+        400:
+          $ref: "#/components/responses/invalidInputResponse"
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+    put:
+      summary: Atualiza credenciais da AWS
+      description: Atualiza credenciais da AWS
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                accessKeyId:
+                  type: string
+                secretAccessKey:
+                  type: string
+            examples:
+              - $ref: "#/components/examples/awsCredentialsRequestExample"
+      responses:
+        200:
+          description: Credenciais atualizadas com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Aws credentials updated with success"
+                data: {}
+        400:
+          $ref: "#/components/responses/invalidInputResponse"
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+    delete:
+      summary: Deleta credenciais da AWS
+      description: Deleta credenciais da AWS
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      responses:
+        200:
+          description: Credenciais deletadas com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Aws credentials deleted with success"
+                data: {}
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /aws-credentials/exists:
+    get:
+      summary: Busca credenciais da AWS
+      description: Verifica se credenciais da AWS existem
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      responses:
+        200:
+          description: Credenciais salvas com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Aws credentials saved with success"
+                data: {
+                    exists: true
+                }
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /source-codes:
+    post:
+      summary: Upload do código fonte
+      description: Upload do código fonte da aplicação
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      requestBody:
+        content:
+          "multipart/form-data":
+            schema:
+              type: object
+              properties:
+                sourceCodeFile:
+                  type: file
+                appName:
+                  type: string
+            example:
+              sourceCodeFile: "sourceCode.zip"
+              appName: "My app"
+      responses:
+        200:
+          description: Upload do código fonte feito com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Source code upload with success"
+                data: {}
+        400:
+          $ref: "#/components/responses/invalidInputResponse"
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+    get:
+      summary: Busca todos os códigos fontes
+      description: Busca todos os códigos fontes
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      responses:
+        200:
+          description: Busca por códigos fonte feita com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Source codes got with success"
+                data: [
+                  {
+                    sourceCodePath: "fulano@email.com-myapp-sourceCode.zip"
+                  }
+                ]
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /source-codes/{sourceCodePath}:
+    delete:
+      summary: Deleta um código fonte
+      description: Deleta um código fonte
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+        - name: sourceCodePath
+          in: path
+          required: true
+      responses:
+        200:
+          description: Código fonte deletado com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Source code deleted with success"
+                data: {}
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /infra-stacks:
+    post:
+      summary: Cria infraestrutura
+      description: Cria infraestrutura
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      requestBody:
+        content:
+          "application/json":
+            schema:
+              type: object
+              properties:
+                appName:
+                  type: string
+                templateType:
+                  type: string
+                sourceCodePath:
+                  type: string
+            example:
+              appName: "My app"
+              templateType: "CONTAINER_MODEL"
+              sourceCodePath: "fulano@email.com-myapp-sourceCode.zip"
+      responses:
+        200:
+          description: Infra criada com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Infra stack created with success"
+                data: {}
+        400:
+          $ref: "#/components/responses/invalidInputResponse"
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+    get:
+      summary: Busca todas as infraestuturas
+      description: Busca todas as infraestuturas
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+      responses:
+        200:
+          description: Busca por infraestruturas feita com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Source codes got with success"
+                data:
+                  infraStacks: [
+                    stackId: "arn:aws:cloudformation:us-east-1:005020830322:stack/tes-cloudformation-stack-myapp/311e1b20-af36-11ee-9287-0a3079578b93",
+                    stackName: "tes-cloudformation-stack-myapp",
+                    stackStatus: "CREATE_IN_PROGRESS"
+                  ]
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+  /infra-stacks/{stackName}:
+    delete:
+      summary: Deleta uma infraestrutura
+      description: Deleta uma infraestrutura
+      parameters:
+        - $ref: "#/components/parameters/authorizationToken"
+        - name: stackName
+          in: path
+          required: true
+      responses:
+        200:
+          description: Infraestrutura deletada com sucesso
+          content:
+            "application/json":
+              schema:
+                $ref: "#/components/schemas/responseWithoutDataSchema"
+              example:
+                apiStatusCode: "SUCCESS"
+                message: "Infra stack deleted with success"
+                data: {}
+        500:
+          $ref: "#/components/responses/internalErrorResponse"
+components:
+  schemas:
+    responseWithDataSchema:
+      type: object
+      properties:
+        apiStatusCode:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+    responseWithoutDataSchema:
+      type: object
+      properties:
+        apiStatusCode:
+          type: string
+        message:
+          type: string
+        data:
+          type: null
+  examples:
+    awsCredentialsRequestExample:
+      summary: Credenciais da AWS
+      value:
+        accessKeyId: "AKIAYOITWGX4OPCHRKHN"
+        secretAccessKey: "bshIUCctyuEM/1JsSRlTKuKCC5hw18dzi/Krz0LL"
+    invalidInputResponseExample:
+      summary: Dados inválidos
+      value:
+        apiStatusCode: "INVALID_INPUT"
+        message: "\"password\" length must be at least 8 characters long"
+        data: [
+          {
+            "message": "\"password\" length must be at least 8 characters long",
+            "path": [
+              "password"
+            ],
+            "type": "string.min",
+            "context": {
+              "limit": 8,
+              "value": "Fulano123",
+              "label": "password",
+              "key": "password"
+            }
+          }
+        ]
+    expiredConfirmationCodeResponseExample:
+      summary: Código de confirmação expirou
+      value:
+        apiStatusCode: "EXPIRED_CONFIRMATION_CODE"
+        message: "Expired confirmation code"
+        data: null
+    invalidConfirmationCodeResponseExample:
+      summary: Código de confirmação inválido
+      value:
+        apiStatusCode: "INVALID_CONFIRMATION_CODE"
+        message: "Invalid confirmation code"
+        data: null
+    incorrectEmailOrPasswordResponseExample:
+      summary: Email ou senha incorretos
+      value:
+        apiStatusCode: "INCORRECT_EMAIL_OR_PASSWORD"
+        message: "Incorrect email or password"
+        data: null
+    emailNotConfirmedResponseExample:
+      summary: Email da conta não foi confirmado
+      value:
+        apiStatusCode: "EMAIL_NOT_CONFIRMED"
+        message: "Email not confirmed"
+        data: null
+  parameters:
+    authorizationToken:
+      name: Authorization
+      in: header
+      required: true
+  responses:
+    invalidInputResponse:
+      description: Dados inválidos
+      content:
+        "application/json":
+          schema:
+            $ref: "#/components/schemas/responseWithDataSchema"
+          examples:
+            - $ref: "#/components/examples/invalidInputResponseExample"
+    internalErrorResponse:
+      description: Erro interno
+      content:
+        "application/json":
+          schema:
+            type: object
+            properties:
+              apiStatusCode:
+                type: string
+              message:
+                type: string
+              data:
+                type: null
+          example:
+            apiStatusCode: "INTERNAL_ERROR"
+            message: "Internal server error"
+            data: null
