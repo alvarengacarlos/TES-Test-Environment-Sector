@@ -1,0 +1,439 @@
+{
+	"info": {
+		"_postman_id": "82dd857d-8e14-4a61-8e55-af72a05943f0",
+		"name": "tes",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30460958"
+	},
+	"item": [
+		{
+			"name": "user",
+			"item": [
+				{
+					"name": "sign-up",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"\",\n    \"password\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/sign-up",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"sign-up"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "confirm-sign-up",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"\",\n    \"confirmationCode\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/confirm-sign-up",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"confirm-sign-up"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "sign-in",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"\",\n    \"password\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/sign-in",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"sign-in"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "aws-credentials",
+			"item": [
+				{
+					"name": "aws-credentials",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"accessKeyId\": \"\",\n    \"secretAccessKey\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/aws-credentials",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"aws-credentials"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "aws-credentials/exists",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/aws-credentials/exists",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"aws-credentials",
+								"exists"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "aws-credentials",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"accessKeyId\": \"\",\n    \"secretAccessKey\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/aws-credentials",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"aws-credentials"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "aws-credentials",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/aws-credentials",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"aws-credentials"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "source-codes",
+			"item": [
+				{
+					"name": "source-codes",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "sourceCodeFile",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "appName",
+									"value": "",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{host}}/source-codes",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"source-codes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "source-codes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/source-codes",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"source-codes"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "source-codes",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/source-codes/:sourceCodePath",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"source-codes",
+								":sourceCodePath"
+							],
+							"variable": [
+								{
+									"key": "sourceCodePath",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "infra-stacks",
+			"item": [
+				{
+					"name": "infra-stacks",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"appName\": \"\",\n    \"templateType\": \"\",\n    \"sourceCodePath\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/infra-stacks",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"infra-stacks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "infra-stacks",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/infra-stacks",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"infra-stacks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "infra-stacks",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{authorizationToken}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{host}}/infra-stacks/:stackName",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"infra-stacks",
+								":stackName"
+							],
+							"variable": [
+								{
+									"key": "stackName",
+									"value": ""
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "host",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "authorizationToken",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
