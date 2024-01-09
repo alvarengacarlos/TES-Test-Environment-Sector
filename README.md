@@ -11,6 +11,8 @@ Este é o diagrama AWS da aplicação e inclui os recursos utilizados para o seu
 
 Toda a diagramação foi feita utilizando a ferramenta `Draw.io` e estão disponíveis no arquivo `docs/tes-backend.drawio`.
 
+Foi construida a documentação da API com a ferramenta Open API. É possível encontrar-la no seguinte caminho: `docs/open-api.yaml`.
+
 ## Requisitos
 Estes são os requisitos da aplicação:
 - [Serverless Framework versão 3](https://www.serverless.com/framework/docs)
